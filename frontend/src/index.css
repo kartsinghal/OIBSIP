@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #FAF9F6;
+  --bg-secondary: #F4F2EB;
+  --bg-tertiary: #EFECE5;
+  --bg-navbar: rgba(250, 249, 246, 0.92);
+  --navbar-border: #E8E5DC;
+  --text-primary: #141312;
+  --text-secondary: #6B6660;
+  --text-tertiary: #A5A096;
+  --border-color: #E6E2D8;
+  --border-focus: #C8C2B5;
+  --card-bg: #FAF9F6;
+  --card-hover-shadow: rgba(21, 20, 19, 0.06);
+
+  --ambient-glow: radial-gradient(circle at 50% 0%, rgba(255,69,0, 0.04) 0%, transparent 60%);
+  --scrollbar-thumb: #D3CDC5;
+  --scrollbar-track: #FAF9F6;
+
+  --accent-muted: rgba(255,69,0, 0.06);
+}
+
+html.dark {
+  --bg-primary: #080808;
+  --bg-secondary: #0D0D0D;
+  --bg-tertiary: #111111;
+  --bg-navbar: rgba(8, 8, 8, 0.94);
+  --navbar-border: #161616;
+  --text-primary: #F0F0F0;
+  --text-secondary: #606060;
+  --text-tertiary: #303030;
+  --border-color: rgba(255, 255, 255, 0.05);
+  --border-focus: #2A2A2A;
+  --card-bg: #0c0c0c;
+  --card-hover-shadow: rgba(0, 0, 0, 0.5);
+
+  --ambient-glow: radial-gradient(circle at 50% 0%, rgba(26, 12, 5, 0.5) 0%, transparent 60%);
+  --scrollbar-thumb: #222;
+  --scrollbar-track: #080808;
+
+  --accent-muted: rgba(255,69,0, 0.04);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global color transitions for smooth theme switching */
+body, header, footer, section, nav, div, p, h1, h2, h3, h4, h5, h6, span, a, button, svg, rect, path, input, select, textarea {
+  transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-primary);
+  background-image: var(--ambient-glow);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* Cinematic film grain — extremely subtle depth texture */
+/* IMPORTANT: opacity must be set in CSS, NOT inside the SVG data URL.
+   CSS custom properties are not readable inside encoded SVG attribute strings. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  /* 512×512 tile eliminates the visible repetition pattern of smaller tiles */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* soft-light blends grain into the surface like real film — not a flat overlay */
+  mix-blend-mode: soft-light;
+  /* Light mode: barely perceptible depth */
+  opacity: 0.035;
+  /* No transition — grain should never animate during theme switch */
+  transition: none;
+}
+
+/* Dark mode: fractionally more visible since dark surfaces mask subtlety */
+html.dark body::after {
+  opacity: 0.05;
+}
+
+::selection {
+  background-color: #FF4500;
+  color: #ffffff;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Footer link hover */
+.footer-link {
+  color: var(--text-secondary) !important;
+  transition: color 0.3s ease !important;
+}
+.footer-link:hover {
+  color: var(--text-primary) !important;
+}
+
+/* ── Auth modal animations ───────────────────────────────────────────────── */
+@keyframes authFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes authSlideUp {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 18px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@keyframes authStepIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
