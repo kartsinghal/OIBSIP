@@ -141,7 +141,11 @@ function OrderSummaryCard({ order }) {
       }}>
         <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', fontWeight: 600 }}>Order Details</span>
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Row label="Order ID"   value={<span style={{ fontFamily: 'Courier New, monospace', fontSize: 13 }}>...{order._id.slice(-8)}</span>} />
+        <Row label="Order ID"   value={
+            <span style={{ fontFamily: 'Courier New, monospace', fontSize: 13, fontWeight: 700, color: '#FF4500' }}>
+              {order.publicId || `...${order._id.slice(-8)}`}
+            </span>
+          } />
           <Row label="Placed"     value={new Date(order.createdAt).toLocaleString()} />
           <Row label="Total"      value={<strong>₹{order.totalPrice.toFixed(2)}</strong>} />
           <Row label="Payment"    value={
@@ -213,7 +217,7 @@ function MyOrdersList({ onSelect }) {
       {orders.map(o => (
         <button
           key={o._id}
-          onClick={() => onSelect(o._id)}
+          onClick={() => onSelect(o.publicId || o._id)}
           style={{
             textAlign: 'left', background: 'var(--bg-secondary)',
             border: '1px solid var(--border-color)', borderRadius: 16,
@@ -224,8 +228,9 @@ function MyOrdersList({ onSelect }) {
           onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: 'Courier New, monospace', fontSize: 13, color: 'var(--text-primary)' }}>
-              ...{o._id.slice(-8)}
+            {/* Show publicId prominently, fall back to last 8 chars of _id */}
+            <span style={{ fontFamily: 'Courier New, monospace', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {o.publicId || `...${o._id.slice(-8)}`}
             </span>
             <span style={{
               fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 100,
@@ -274,11 +279,16 @@ export default function TrackOrderPage() {
     if (!silent) setLoading(true);
     setError('');
     try {
-      const res = await apiClient.get(`/orders/${id}`);
+      // If it looks like a public ID (INF-YYYY-XXXXXX), use the public track endpoint
+      const isPublicId = /^INF-\d{4}-[A-Z0-9]{6}$/i.test(id.trim());
+      const url = isPublicId
+        ? `/orders/track/${id.trim().toUpperCase()}`
+        : `/orders/${id.trim()}`;
+      const res = await apiClient.get(url);
       setOrder(res.data.data);
       setLastPoll(new Date());
     } catch (err) {
-      if (!silent) setError(err.response?.data?.message || 'Order not found. Check the ID and try again.');
+      if (!silent) setError(err.response?.data?.message || 'Order not found. Check the Order ID and try again.');
     } finally {
       if (!silent) setLoading(false);
     }
@@ -323,8 +333,8 @@ export default function TrackOrderPage() {
   };
 
   return (
-    <main style={{ backgroundColor: 'var(--bg-primary)', minHeight: '90vh', paddingTop: 120, paddingBottom: 80 }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px' }}>
+    <main style={{ backgroundColor: 'var(--bg-primary)', minHeight: '90vh', paddingTop: 'clamp(80px, 10vw, 120px)', paddingBottom: 80 }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 clamp(16px, 5vw, 40px)' }}>
 
         {/* Header */}
         <div style={{ marginBottom: 48, textAlign: 'center' }}>
@@ -348,7 +358,7 @@ export default function TrackOrderPage() {
                 type="text"
                 value={inputId}
                 onChange={e => setInputId(e.target.value)}
-                placeholder="Paste full Mongo order ID..."
+                placeholder="e.g. INF-2026-A7K9P2"
                 style={{
                   width: '100%', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)', fontSize: 15, padding: '14px 20px', borderRadius: 12,
@@ -439,7 +449,7 @@ export default function TrackOrderPage() {
 
           {/* Tracking panel */}
           {!loading && order && (
-            <motion.div key={order._id + order.orderStatus} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
+            <motion.div key={(order.publicId || order._id) + order.orderStatus} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
               className="tracking-grid"
             >
               <style>{`
@@ -461,8 +471,8 @@ export default function TrackOrderPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, borderBottom: '1px solid var(--border-color)', paddingBottom: 20 }}>
                   <div>
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Progress</span>
-                    <h3 style={{ color: 'var(--text-primary)', margin: '4px 0 0 0', fontFamily: 'Courier New, monospace', fontSize: 16 }}>
-                      ...{order._id.slice(-8)}
+                    <h3 style={{ color: '#FF4500', margin: '4px 0 0 0', fontFamily: 'Courier New, monospace', fontSize: 16, fontWeight: 800 }}>
+                      {order.publicId || `...${order._id.slice(-8)}`}
                     </h3>
                   </div>
                   <span style={{

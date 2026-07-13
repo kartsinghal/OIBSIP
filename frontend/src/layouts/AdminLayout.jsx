@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,6 +10,7 @@ const ADMIN_NAV = [
 
 export default function AdminLayout() {
   const { user, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)' }}>
@@ -21,9 +23,84 @@ export default function AdminLayout() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-primary)', paddingTop: 72 }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-      {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-      <aside style={{
+        /* Mobile overlay for sidebar */
+        .admin-sidebar-overlay {
+          display: none;
+        }
+        @media (max-width: 768px) {
+          .admin-sidebar {
+            position: fixed !important;
+            top: 72px !important;
+            left: 0 !important;
+            height: calc(100vh - 72px) !important;
+            z-index: 40 !important;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease !important;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+          }
+          .admin-sidebar.open {
+            transform: translateX(0) !important;
+          }
+          .admin-sidebar-overlay {
+            display: block;
+            position: fixed;
+            inset: 0;
+            top: 72px;
+            background: rgba(0,0,0,0.5);
+            z-index: 39;
+          }
+          .admin-mobile-topbar {
+            display: flex !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .admin-mobile-topbar { display: none !important; }
+        }
+      `}</style>
+
+      {/* Mobile top bar */}
+      <div className="admin-mobile-topbar" style={{
+        display: 'none',
+        position: 'fixed',
+        top: 72,
+        left: 0,
+        right: 0,
+        zIndex: 38,
+        background: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-color)',
+        padding: '10px 16px',
+        alignItems: 'center',
+        gap: 12,
+      }}>
+        <button
+          onClick={() => setSidebarOpen(o => !o)}
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--border-color)',
+            borderRadius: 8,
+            width: 36, height: 36,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'var(--text-primary)', fontSize: 18,
+            flexShrink: 0,
+          }}
+        >
+          ☰
+        </button>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#FF4500', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+          Admin Portal
+        </span>
+      </div>
+
+      {/* Sidebar overlay (mobile) */}
+      {sidebarOpen && (
+        <div className="admin-sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* ── Sidebar ── */}
+      <aside className={`admin-sidebar${sidebarOpen ? ' open' : ''}`} style={{
         width: 220,
         flexShrink: 0,
         borderRight: '1px solid var(--border-color)',
@@ -34,6 +111,7 @@ export default function AdminLayout() {
         height: 'calc(100vh - 72px)',
         display: 'flex',
         flexDirection: 'column',
+        transition: 'transform 0.3s ease',
       }}>
         {/* Brand label */}
         <div style={{ padding: '0 24px 24px', borderBottom: '1px solid var(--border-color)', marginBottom: 16 }}>
@@ -52,6 +130,7 @@ export default function AdminLayout() {
               key={to}
               to={to}
               end={exact}
+              onClick={() => setSidebarOpen(false)}
               style={({ isActive }) => ({
                 display: 'flex',
                 alignItems: 'center',
@@ -66,18 +145,6 @@ export default function AdminLayout() {
                 border: isActive ? '1px solid rgba(255,69,0,0.15)' : '1px solid transparent',
                 transition: 'all 0.15s',
               })}
-              onMouseEnter={e => {
-                if (!e.currentTarget.style.color.includes('232')) {
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                }
-              }}
-              onMouseLeave={e => {
-                if (!e.currentTarget.getAttribute('aria-current')) {
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }
-              }}
             >
               <span style={{ fontSize: 16 }}>{icon}</span>
               {label}
@@ -96,9 +163,21 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* ── Page content ─────────────────────────────────────────────────── */}
-      <main style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
-        <Outlet />
+      {/* ── Page content ── */}
+      <main style={{
+        flex: 1,
+        overflowY: 'auto',
+        minWidth: 0,
+        // On mobile, push content down past the mobile topbar
+      }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .admin-main-content { padding-top: 52px !important; }
+          }
+        `}</style>
+        <div className="admin-main-content">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

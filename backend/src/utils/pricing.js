@@ -69,6 +69,22 @@ export function validateBuilderOptions(item) {
     errors.push('extraCheese must be a boolean');
   }
 
+  for (const field of ['base', 'sauce', 'cheese']) {
+    if (item[field] !== undefined && item[field] !== '' && typeof item[field] !== 'string') {
+      errors.push(`${field} must be a string`);
+    }
+  }
+
+  for (const field of ['veggies', 'meat']) {
+    if (item[field] !== undefined) {
+      if (!Array.isArray(item[field])) {
+        errors.push(`${field} must be an array of strings`);
+      } else if (item[field].some((value) => typeof value !== 'string' || !value.trim())) {
+        errors.push(`each ${field} value must be a non-empty string`);
+      }
+    }
+  }
+
   if (item.toppings !== undefined) {
     if (!Array.isArray(item.toppings)) {
       errors.push('toppings must be an array of strings');

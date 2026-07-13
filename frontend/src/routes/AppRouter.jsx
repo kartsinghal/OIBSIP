@@ -12,6 +12,7 @@ import AdminDashboard from '../pages/AdminDashboard';
 import AdminInventory from '../pages/AdminInventory';
 import CartPage from '../pages/CartPage';
 import CheckoutPage from '../pages/CheckoutPage';
+import ContactPage from '../pages/ContactPage';
 
 function AppRouter() {
   return (
@@ -27,6 +28,7 @@ function AppRouter() {
           <Route path="/track-order" element={<TrackOrderPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
 

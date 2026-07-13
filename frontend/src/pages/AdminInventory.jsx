@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,22 +9,36 @@ const getStockStatus = (quantity, threshold) => {
   return { label: 'Healthy', color: 'green' };
 };
 
-const STATUS_COLORS = {
-  green: 'bg-green-100 text-green-800',
-  yellow: 'bg-yellow-100 text-yellow-800',
-  red: 'bg-red-100 text-red-800',
+const STATUS_BADGE_STYLES = {
+  green:  { bg: 'rgba(22,163,74,0.12)',   border: 'rgba(22,163,74,0.3)',   text: '#16a34a' },
+  yellow: { bg: 'rgba(234,179,8,0.12)',   border: 'rgba(234,179,8,0.3)',   text: '#ca8a04' },
+  red:    { bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)',   text: '#dc2626' },
+};
+
+// ── Shared input style ─────────────────────────────────────────────────────────
+const inputStyle = {
+  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 8,
+  color: 'var(--text-primary)',
+  fontSize: 13,
+  padding: '8px 12px',
+  outline: 'none',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.2s ease',
 };
 
 // ── Inline edit row component ─────────────────────────────────────────────────
 const InventoryRow = ({ item, onUpdate, onDelete }) => {
-  const [editValue, setEditValue] = useState('');
-  const [operation, setOperation] = useState('set');
+  const [editValue, setEditValue]       = useState('');
+  const [operation, setOperation]       = useState('set');
   const [editThreshold, setEditThreshold] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [rowError, setRowError] = useState('');
+  const [saving, setSaving]             = useState(false);
+  const [deleting, setDeleting]         = useState(false);
+  const [rowError, setRowError]         = useState('');
 
   const status = getStockStatus(item.quantity, item.threshold);
+  const badge  = STATUS_BADGE_STYLES[status.color];
 
   const handleSave = async () => {
     const numVal = parseFloat(editValue);
@@ -58,67 +71,128 @@ const InventoryRow = ({ item, onUpdate, onDelete }) => {
     }
   };
 
+  const TD = { padding: '14px 20px', verticalAlign: 'middle', borderBottom: '1px solid var(--border-color)' };
+
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+    <tr
+      style={{ transition: 'background-color 0.15s' }}
+      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+    >
+      {/* Name */}
+      <td style={{ ...TD, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
         {item.ingredientName}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-mono">
-        {item.quantity} {item.unit}
+
+      {/* Current Stock */}
+      <td style={{ ...TD, fontSize: 13, color: 'var(--text-primary)', fontFamily: 'Courier New, monospace', whiteSpace: 'nowrap' }}>
+        {item.quantity} <span style={{ color: 'var(--text-tertiary)' }}>{item.unit}</span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {item.threshold} {item.unit}
+
+      {/* Threshold */}
+      <td style={{ ...TD, fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+        {item.threshold} <span style={{ color: 'var(--text-tertiary)' }}>{item.unit}</span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${STATUS_COLORS[status.color]}`}>
+
+      {/* Status badge */}
+      <td style={{ ...TD, whiteSpace: 'nowrap' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center',
+          fontSize: 11, fontWeight: 700, padding: '3px 10px',
+          borderRadius: 100, textTransform: 'uppercase', letterSpacing: '0.05em',
+          backgroundColor: badge.bg, border: `1px solid ${badge.border}`, color: badge.text,
+        }}>
           {status.label}
         </span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center gap-2 flex-wrap">
+
+      {/* Update / Delete controls */}
+      <td style={{ ...TD }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* Operation selector */}
           <select
             value={operation}
-            onChange={(e) => setOperation(e.target.value)}
-            className="text-xs border-gray-300 rounded shadow-sm focus:ring-orange-500 focus:border-orange-500 h-8"
+            onChange={e => setOperation(e.target.value)}
+            style={{ ...inputStyle, padding: '6px 10px', height: 34, cursor: 'pointer' }}
+            onFocus={e => e.target.style.borderColor = '#FF4500'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           >
             <option value="set">Set</option>
             <option value="increase">+Add</option>
-            <option value="decrease">-Remove</option>
+            <option value="decrease">−Remove</option>
           </select>
+
+          {/* Quantity input */}
           <input
             type="number"
             min="0"
             step="0.1"
             value={editValue}
-            onChange={(e) => { setEditValue(e.target.value); setRowError(''); }}
+            onChange={e => { setEditValue(e.target.value); setRowError(''); }}
             placeholder="Qty"
-            className="w-20 text-sm border-gray-300 rounded shadow-sm focus:ring-orange-500 focus:border-orange-500 h-8 px-2"
+            style={{ ...inputStyle, width: 72, height: 34, padding: '6px 10px' }}
+            onFocus={e => e.target.style.borderColor = '#FF4500'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           />
+
+          {/* Threshold input */}
           <input
             type="number"
             min="0"
             step="0.1"
             value={editThreshold}
-            onChange={(e) => setEditThreshold(e.target.value)}
+            onChange={e => setEditThreshold(e.target.value)}
             placeholder="Threshold"
-            className="w-24 text-sm border-gray-300 rounded shadow-sm focus:ring-orange-500 focus:border-orange-500 h-8 px-2"
+            style={{ ...inputStyle, width: 100, height: 34, padding: '6px 10px' }}
+            onFocus={e => e.target.style.borderColor = '#FF4500'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           />
+
+          {/* Save button */}
           <button
             onClick={handleSave}
             disabled={saving || editValue === ''}
-            className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded shadow disabled:opacity-40 transition-colors h-8"
+            style={{
+              height: 34, padding: '0 14px',
+              background: saving || editValue === '' ? 'var(--bg-tertiary)' : '#FF4500',
+              color: saving || editValue === '' ? 'var(--text-tertiary)' : '#fff',
+              border: '1px solid transparent',
+              borderRadius: 8, fontSize: 12, fontWeight: 700,
+              cursor: saving || editValue === '' ? 'not-allowed' : 'pointer',
+              transition: 'background 0.2s, opacity 0.2s',
+              opacity: saving ? 0.6 : 1,
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { if (!saving && editValue !== '') e.currentTarget.style.background = '#DC3800'; }}
+            onMouseLeave={e => { if (!saving && editValue !== '') e.currentTarget.style.background = '#FF4500'; }}
           >
             {saving ? '...' : 'Save'}
           </button>
+
+          {/* Delete button */}
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded shadow disabled:opacity-40 transition-colors h-8"
+            style={{
+              height: 34, padding: '0 14px',
+              background: 'rgba(239,68,68,0.08)',
+              color: '#dc2626',
+              border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 8, fontSize: 12, fontWeight: 700,
+              cursor: deleting ? 'not-allowed' : 'pointer',
+              transition: 'background 0.2s, opacity 0.2s',
+              opacity: deleting ? 0.5 : 1,
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { if (!deleting) e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; }}
+            onMouseLeave={e => { if (!deleting) e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
           >
             {deleting ? '...' : 'Delete'}
           </button>
         </div>
-        {rowError && <p className="text-xs text-red-600 mt-1">{rowError}</p>}
+        {rowError && (
+          <p style={{ marginTop: 6, fontSize: 12, color: '#dc2626' }}>{rowError}</p>
+        )}
       </td>
     </tr>
   );
@@ -154,59 +228,105 @@ const CreateIngredientForm = ({ onCreate }) => {
     }
   };
 
-  const inputCls = 'border border-gray-300 rounded-md shadow-sm text-sm focus:ring-orange-500 focus:border-orange-500 px-3 py-2';
+  const fieldInput = (override = {}) => ({
+    ...inputStyle,
+    ...override,
+  });
+
+  const LabelStyle = {
+    display: 'block',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: 'var(--text-secondary)',
+    marginBottom: 6,
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-5 rounded-lg shadow-sm border mb-6">
-      <h2 className="text-base font-semibold text-gray-800 mb-4">➕ Add New Ingredient</h2>
-      <div className="flex flex-wrap gap-3 items-end">
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 16,
+        padding: '20px 24px',
+        marginBottom: 20,
+      }}
+    >
+      <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16, letterSpacing: '-0.01em' }}>
+        ➕ Add New Ingredient
+      </h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Name</label>
+          <label style={LabelStyle}>Name</label>
           <input
             value={form.ingredientName}
             onChange={e => setForm(f => ({ ...f, ingredientName: e.target.value }))}
             placeholder="e.g. dough"
-            className={inputCls}
+            style={fieldInput({ minWidth: 160 })}
+            onFocus={e => e.target.style.borderColor = '#FF4500'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Quantity</label>
+          <label style={LabelStyle}>Quantity</label>
           <input
             type="number" min="0" step="0.1"
             value={form.quantity}
             onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
             placeholder="0"
-            className={`${inputCls} w-24`}
+            style={fieldInput({ width: 96 })}
+            onFocus={e => e.target.style.borderColor = '#FF4500'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Threshold</label>
+          <label style={LabelStyle}>Threshold</label>
           <input
             type="number" min="0" step="0.1"
             value={form.threshold}
             onChange={e => setForm(f => ({ ...f, threshold: e.target.value }))}
             placeholder="0"
-            className={`${inputCls} w-28`}
+            style={fieldInput({ width: 96 })}
+            onFocus={e => e.target.style.borderColor = '#FF4500'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Unit</label>
+          <label style={LabelStyle}>Unit</label>
           <input
             value={form.unit}
             onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
             placeholder="pcs / g / ml"
-            className={`${inputCls} w-28`}
+            style={fieldInput({ width: 110 })}
+            onFocus={e => e.target.style.borderColor = '#FF4500'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           />
         </div>
         <button
           type="submit"
           disabled={saving}
-          className="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-md shadow disabled:opacity-40 transition-colors"
+          style={{
+            padding: '9px 22px',
+            background: saving ? 'var(--bg-tertiary)' : '#FF4500',
+            color: saving ? 'var(--text-tertiary)' : '#fff',
+            border: 'none', borderRadius: 8,
+            fontSize: 13, fontWeight: 700,
+            cursor: saving ? 'not-allowed' : 'pointer',
+            transition: 'background 0.2s, opacity 0.2s',
+            opacity: saving ? 0.6 : 1,
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { if (!saving) e.currentTarget.style.background = '#DC3800'; }}
+          onMouseLeave={e => { if (!saving) e.currentTarget.style.background = '#FF4500'; }}
         >
           {saving ? 'Creating...' : 'Create'}
         </button>
       </div>
-      {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+      {error && (
+        <p style={{ marginTop: 10, fontSize: 12, color: '#dc2626' }}>{error}</p>
+      )}
     </form>
   );
 };
@@ -214,18 +334,18 @@ const CreateIngredientForm = ({ onCreate }) => {
 // ── Main AdminInventory component ─────────────────────────────────────────────
 const AdminInventory = () => {
   const { user, loading: authLoading } = useAuth();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [items,    setItems]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
   const [feedback, setFeedback] = useState('');
-  const [search, setSearch] = useState('');
+  const [search,   setSearch]   = useState('');
 
   const fetchInventory = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       const res = await apiClient.get('/inventory');
-      setItems(res.data.data);
+      setItems(Array.isArray(res.data?.data) ? res.data.data : []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch inventory');
     } finally {
@@ -265,108 +385,225 @@ const AdminInventory = () => {
     showFeedback(res.data.message || 'Item deleted');
   };
 
-  if (authLoading) return <div className="p-10 text-center text-gray-500">Loading...</div>;
+  if (authLoading) return (
+    <div style={{ padding: 80, textAlign: 'center', color: 'var(--text-secondary)' }}>
+      Loading...
+    </div>
+  );
+
+  if (!user || user.role !== 'admin') return (
+    <div style={{ padding: 80, textAlign: 'center', color: 'var(--text-secondary)' }}>
+      Access restricted to administrators.
+    </div>
+  );
 
   const filtered = items.filter(i =>
     i.ingredientName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const lowStockCount = items.filter(i => i.quantity > 0 && i.quantity <= i.threshold).length;
+  const lowStockCount  = items.filter(i => i.quantity > 0 && i.quantity <= i.threshold).length;
   const outOfStockCount = items.filter(i => i.quantity <= 0).length;
 
+  const TH_STYLE = {
+    padding: '12px 20px',
+    textAlign: 'left',
+    fontSize: 11,
+    fontWeight: 700,
+    color: 'var(--text-tertiary)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.07em',
+    borderBottom: '1px solid var(--border-color)',
+    whiteSpace: 'nowrap',
+    background: 'var(--bg-secondary)',
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 min-h-screen">
-      {/* Header */}
-      <div className="mb-8 border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Dashboard</h1>
-          <p className="text-gray-500 mt-1">Manage ingredient stock levels</p>
-        </div>
-        <div className="flex gap-3 flex-wrap">
-          {outOfStockCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold">
-              <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
-              {outOfStockCount} Out of Stock
-            </span>
-          )}
-          {lowStockCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm font-semibold">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block"></span>
-              {lowStockCount} Low Stock
-            </span>
-          )}
-          <button
-            onClick={fetchInventory}
-            className="px-4 py-1.5 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            ↻ Refresh
-          </button>
-        </div>
-      </div>
+    <main style={{ backgroundColor: 'var(--bg-primary)', minHeight: '90vh', padding: '40px 0 80px' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+          .inv-container { padding: 20px 16px !important; }
+        }
+      `}</style>
 
-      {/* Feedback / Error */}
-      {feedback && (
-        <div className="mb-4 p-3 bg-green-50 text-green-700 border border-green-200 rounded-md text-sm shadow-sm">
-          ✓ {feedback}
-        </div>
-      )}
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md text-sm shadow-sm">
-          {error}
-        </div>
-      )}
+      <div className="inv-container" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 clamp(16px, 4vw, 40px)' }}>
 
-      {/* Create Form */}
-      <CreateIngredientForm onCreate={handleCreate} />
+        {/* ── Header ── */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 32, flexWrap: 'wrap', gap: 16,
+          paddingBottom: 24, borderBottom: '1px solid var(--border-color)',
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: 800,
+              margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)',
+            }}>
+              Inventory Dashboard
+            </h1>
+            <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
+              Manage ingredient stock levels
+            </p>
+          </div>
 
-      {/* Search */}
-      <div className="mb-5 bg-white p-4 rounded-lg shadow-sm border">
-        <input
-          type="text"
-          placeholder="Search ingredient..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full sm:w-80 border-gray-300 rounded-md shadow-sm text-sm focus:ring-orange-500 focus:border-orange-500"
-        />
-      </div>
-
-      {/* Table */}
-      {loading ? (
-        <div className="text-center py-20 text-gray-400">Loading inventory...</div>
-      ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg border">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Ingredient', 'Current Stock', 'Threshold', 'Status', 'Update / Delete'].map(h => (
-                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-400">
-                      No ingredients found.
-                    </td>
-                  </tr>
-                ) : filtered.map(item => (
-                  <InventoryRow
-                    key={item._id}
-                    item={item}
-                    onUpdate={handleUpdate}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            {outOfStockCount > 0 && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 100,
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                color: '#dc2626', fontSize: 12, fontWeight: 700,
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
+                {outOfStockCount} Out of Stock
+              </span>
+            )}
+            {lowStockCount > 0 && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 100,
+                background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.25)',
+                color: '#ca8a04', fontSize: 12, fontWeight: 700,
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ca8a04', display: 'inline-block' }} />
+                {lowStockCount} Low Stock
+              </span>
+            )}
+            <button
+              onClick={fetchInventory}
+              disabled={loading}
+              style={{
+                padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; }}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+            >
+              <span style={{ display: 'inline-block', transform: loading ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>↻</span>
+              Refresh
+            </button>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* ── Feedback / Error ── */}
+        {feedback && (
+          <div style={{
+            marginBottom: 20, padding: '12px 20px', borderRadius: 12,
+            background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)',
+            color: '#15803d', fontSize: 13, fontWeight: 600,
+          }}>
+            ✓ {feedback}
+          </div>
+        )}
+        {error && (
+          <div style={{
+            marginBottom: 20, padding: '12px 20px', borderRadius: 12,
+            background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)',
+            color: '#dc2626', fontSize: 13,
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* ── Create Form ── */}
+        <CreateIngredientForm onCreate={handleCreate} />
+
+        {/* ── Search bar ── */}
+        <div style={{
+          background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+          borderRadius: 16, padding: '16px 20px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: 15 }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Search ingredient..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              ...inputStyle,
+              flex: 1,
+              maxWidth: 360,
+              border: 'none',
+              background: 'transparent',
+              padding: '4px 0',
+              fontSize: 14,
+            }}
+            onFocus={e => e.target.style.outline = 'none'}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              style={{
+                background: 'none', border: 'none',
+                color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 16, padding: 0,
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* ── Table ── */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-secondary)' }}>
+            <div style={{
+              width: 28, height: 28,
+              border: '2px solid rgba(255,69,0,0.15)', borderTopColor: '#FF4500',
+              borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }} />
+            Loading inventory...
+          </div>
+        ) : (
+          <div style={{
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+            borderRadius: 16, overflow: 'hidden',
+          }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Ingredient', 'Current Stock', 'Threshold', 'Status', 'Update / Delete'].map(h => (
+                      <th key={h} style={TH_STYLE}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" style={{
+                        padding: '60px 20px', textAlign: 'center',
+                        color: 'var(--text-tertiary)', fontSize: 14,
+                      }}>
+                        {search ? `No ingredients matching "${search}".` : 'No ingredients found.'}
+                      </td>
+                    </tr>
+                  ) : filtered.map(item => (
+                    <InventoryRow
+                      key={item._id}
+                      item={item}
+                      onUpdate={handleUpdate}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{
+              padding: '12px 20px', borderTop: '1px solid var(--border-color)',
+              fontSize: 12, color: 'var(--text-tertiary)',
+            }}>
+              Showing {filtered.length} of {items.length} ingredients
+            </div>
+          </div>
+        )}
+
+      </div>
+    </main>
   );
 };
 

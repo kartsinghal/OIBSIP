@@ -2,12 +2,25 @@ import { motion } from 'framer-motion';
 
 export default function InsideKitchen() {
   return (
-    <section style={{
+    <section className="inside-kitchen-section" style={{
       backgroundColor: 'var(--bg-primary)',
-      padding: '160px 40px',
       position: 'relative',
       overflow: 'hidden',
     }}>
+      <style>{`
+        .inside-kitchen-section { padding: 160px 40px; }
+        .ik-grid { display: flex; flex-wrap: wrap; align-items: center; gap: 8%; }
+        .ik-stats { display: flex; gap: 48px; }
+        .ik-image-wrapper { flex: 1 1 500px; position: relative; height: 600px; margin-top: 40px; }
+        
+        @media (max-width: 768px) {
+          .inside-kitchen-section { padding: 80px 20px; }
+          .ik-grid { gap: 40px; }
+          .ik-stats { justify-content: center; gap: 32px; }
+          .ik-text-block { text-align: center; display: flex; flex-direction: column; align-items: center; }
+          .ik-image-wrapper { height: 350px; margin-top: 20px; width: 100%; flex-basis: 100%; }
+        }
+      `}</style>
       {/* Background radial accent to give depth to this section */}
       <div style={{
         position: 'absolute',
@@ -19,15 +32,16 @@ export default function InsideKitchen() {
         pointerEvents: 'none',
       }} />
 
-      <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8%' }}>
+      <div className="ik-grid" style={{ maxWidth: 1400, margin: '0 auto' }}>
         
         {/* Left: Editorial Text Block */}
-        <div style={{ flex: '1 1 400px', maxWidth: 540, position: 'relative', zIndex: 2 }}>
+        <div className="ik-text-block" style={{ flex: '1 1 400px', maxWidth: 540, position: 'relative', zIndex: 2 }}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'inherit' }}
           >
             <p style={{
               fontSize: 11,
@@ -67,7 +81,7 @@ export default function InsideKitchen() {
             </p>
 
             {/* Minor textural stats */}
-            <div style={{ display: 'flex', gap: 48 }}>
+            <div className="ik-stats">
               <div>
                 <span style={{ display: 'block', fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>90s</span>
                 <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>Bake Time</span>
@@ -81,7 +95,7 @@ export default function InsideKitchen() {
         </div>
 
         {/* Right: Asymmetrical Layered Image Composition */}
-        <div style={{ flex: '1 1 500px', position: 'relative', height: 600, marginTop: '40px' }}>
+        <div className="ik-image-wrapper">
           
           {/* Main Background Image - Dough prep */}
           <motion.div

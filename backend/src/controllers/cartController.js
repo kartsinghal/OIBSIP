@@ -1,38 +1,62 @@
 import Cart from '../models/Cart.js';
 import Pizza from '../models/Pizza.js';
-import Inventory from '../models/Inventory.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { computeUnitPrice, validateBuilderOptions, VALID_SIZES } from '../utils/pricing.js';
+import {
+  buildRequirements,
+  checkInventory,
+  extractIngredientNamesFromOrderItems,
+  extractIngredientNamesFromPizza,
+  normalizeIngredientName,
+  syncInventoryIngredients,
+} from '../services/inventoryService.js';
 
 const FALLBACK_PIZZAS = {
-  Margherita: {
-    description: 'San Marzano tomato, fior di latte, fresh basil, EVOO',
-    category: 'veg',
-    basePrice: 299,
-  },
-  Pepperoni: {
-    description: 'Tomato base, mozzarella, premium beef pepperoni, oregano',
-    category: 'non-veg',
-    basePrice: 399,
-  },
-  'Truffle Funghi': {
-    description: 'White truffle oil, wild mushrooms, fontina, fresh thyme',
-    category: 'veg',
-    basePrice: 549,
-  },
-  'Quattro Formaggi': {
-    description: 'Mozzarella, gorgonzola, parmigiano, ricotta, acacia honey',
-    category: 'veg',
-    basePrice: 499,
-  },
-  'Custom Pizza': {
-    description: 'Custom pizza from the builder',
-    category: 'veg',
-    basePrice: 449,
-  },
+  // Classic
+  Margherita: { description: 'San Marzano tomato, fior di latte, fresh basil, EVOO', category: 'veg', basePrice: 299 },
+  Pepperoni: { description: 'Tomato base, mozzarella, premium beef pepperoni, oregano', category: 'non-veg', basePrice: 399 },
+  Napolitana: { description: 'Crushed tomato, anchovies, capers, black olives, oregano', category: 'non-veg', basePrice: 349 },
+  Diavola: { description: 'Spicy salami, tomato, mozzarella, chilli flakes, fresh basil', category: 'non-veg', basePrice: 429 },
+  Capricciosa: { description: 'Ham, artichokes, mushrooms, black olives, mozzarella', category: 'non-veg', basePrice: 449 },
+  Marinara: { description: 'San Marzano tomato, garlic, oregano, EVOO — no cheese', category: 'veg', basePrice: 249 },
+  'Prosciutto e Funghi': { description: 'Parma ham, wild mushrooms, mozzarella, fresh thyme', category: 'non-veg', basePrice: 479 },
+
+  // Specialty
+  'Truffle Funghi': { description: 'White truffle oil, wild mushrooms, fontina, fresh thyme', category: 'veg', basePrice: 549 },
+  'Quattro Formaggi': { description: 'Mozzarella, gorgonzola, parmigiano, ricotta, acacia honey', category: 'veg', basePrice: 499 },
+  'Burrata & Bresaola': { description: 'Creamy burrata, cured bresaola, rocket, lemon zest, EVOO', category: 'non-veg', basePrice: 649 },
+  'Smoky BBQ Chicken': { description: 'Smoky BBQ base, grilled chicken, red onion, jalapeño, cheddar', category: 'non-veg', basePrice: 529 },
+  'Prawn Aglio': { description: 'Tiger prawns, garlic oil, cherry tomato, parsley, mozzarella', category: 'non-veg', basePrice: 699 },
+  'Fig & Gorgonzola': { description: 'Fresh fig, gorgonzola, walnuts, honey drizzle, rocket', category: 'veg', basePrice: 579 },
+  'Speck & Pear': { description: 'Smoked speck, sliced pear, brie, balsamic glaze, toasted walnuts', category: 'non-veg', basePrice: 599 },
+
+  // Vegan
+  'Garden Primavera': { description: 'Tomato base, courgette, peppers, red onion, cherry tomato, basil', category: 'veg', basePrice: 349 },
+  'Roasted Aubergine': { description: 'Smoky roasted aubergine, tahini, harissa, pine nuts, mint', category: 'veg', basePrice: 379 },
+  'Pesto Verde': { description: 'Vegan basil pesto, cherry tomato, artichoke, capers, EVOO', category: 'veg', basePrice: 399 },
+  'Mushroom Truffle': { description: 'Cashew cream base, mixed mushrooms, truffle oil, thyme, garlic', category: 'veg', basePrice: 449 },
+  'Spicy Arrabiata': { description: 'Arrabiata sauce, olives, capers, chilli, roasted peppers', category: 'veg', basePrice: 329 },
+  'Butternut Squash': { description: 'Roasted butternut squash, caramelised red onion, vegan feta, sage', category: 'veg', basePrice: 389 },
+  'Fig & Rocket': { description: 'Fresh fig, vegan mozzarella, balsamic glaze, toasted pine nuts, rocket', category: 'veg', basePrice: 419 },
+
+  'Custom Pizza': { description: 'Custom pizza from the builder', category: 'veg', basePrice: 449 },
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const sortedList = (value) => [...(Array.isArray(value) ? value : [])].sort().join(',');
+
+const getFallbackPizzaIngredients = (baseName, pizzaData, toppings = []) => {
+  if (normalizeIngredientName(baseName) === 'custom pizza') return [];
+
+  const ingredients = extractIngredientNamesFromPizza({
+    name: baseName,
+    description: pizzaData.description,
+    ingredients: pizzaData.ingredients || [],
+  });
+
+  return ingredients.length > 0 ? ingredients : toppings;
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,7 +71,18 @@ const recalcAndSave = async (cart) => {
 
 /** Returns a normalised fingerprint for dedup comparison. */
 const itemKey = (item) =>
-  `${item.pizza}|${item.size}|${item.crust}|${!!item.extraCheese}|${[...(item.toppings || [])].sort().join(',')}`;
+  [
+    item.pizza,
+    item.size,
+    item.crust,
+    item.base || '',
+    item.sauce || '',
+    item.cheese || '',
+    !!item.extraCheese,
+    sortedList(item.veggies),
+    sortedList(item.meat),
+    sortedList(item.toppings),
+  ].join('|');
 
 /** Validate pizza exists + is available, then run builder + inventory checks. */
 async function validateItem(pizzaId, item) {
@@ -79,20 +114,17 @@ async function validateItem(pizzaId, item) {
     throw err;
   }
 
-  // 4. Inventory check for toppings
-  const toppings = item.toppings || [];
-  if (toppings.length > 0) {
-    const records = await Inventory.find({ ingredientName: { $in: toppings } });
-    const invMap = Object.fromEntries(records.map((r) => [r.ingredientName.toLowerCase(), r]));
-    const outOfStock = toppings.filter((t) => invMap[t.toLowerCase()] && invMap[t.toLowerCase()].quantity <= 0);
-    if (outOfStock.length) {
-      const err = new Error(`Toppings out of stock: ${outOfStock.join(', ')}`);
-      err.statusCode = 409;
-      throw err;
-    }
-  }
+  const inventoryItem = {
+    ...item,
+    pizzaIngredients: item.pizzaIngredients?.length
+      ? item.pizzaIngredients
+      : extractIngredientNamesFromPizza(pizza),
+  };
 
-  return pizza;
+  await checkInventory(buildRequirements([inventoryItem]));
+  await syncInventoryIngredients(extractIngredientNamesFromOrderItems([inventoryItem]));
+
+  return { pizza, pizzaIngredients: inventoryItem.pizzaIngredients };
 }
 
 // ── Controllers ───────────────────────────────────────────────────────────────
@@ -119,7 +151,20 @@ export const getCart = asyncHandler(async (req, res) => {
  * Body: { pizza, quantity, size, crust?, extraCheese?, toppings? }
  */
 export const addToCart = asyncHandler(async (req, res) => {
-  const { pizza: pizzaId, name, quantity = 1, size = 'medium', crust = 'classic', extraCheese = false, toppings = [] } = req.body;
+  const {
+    pizza: pizzaId,
+    name,
+    quantity = 1,
+    size = 'medium',
+    crust = 'classic',
+    base = '',
+    sauce = '',
+    cheese = '',
+    extraCheese = false,
+    veggies = [],
+    meat = [],
+    toppings = [],
+  } = req.body;
 
   let finalPizzaId = pizzaId;
   const isValidId = /^[0-9a-fA-F]{24}$/.test(pizzaId);
@@ -134,11 +179,17 @@ export const addToCart = asyncHandler(async (req, res) => {
         name: baseName,
         ...FALLBACK_PIZZAS[baseName],
         sizes: ['small', 'medium', 'large'],
-        ingredients: toppings,
+        ingredients: getFallbackPizzaIngredients(baseName, FALLBACK_PIZZAS[baseName], toppings),
       });
     }
-    if (!dbPizza) dbPizza = await Pizza.findOne();
-    if (dbPizza) finalPizzaId = dbPizza._id.toString();
+    
+    if (!dbPizza) {
+      const err = new Error(`Pizza "${baseName}" not found and not in fallback menu`);
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    finalPizzaId = dbPizza._id.toString();
   }
 
   // Basic required-field check
@@ -148,8 +199,8 @@ export const addToCart = asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const item = { pizza: finalPizzaId, quantity, size, crust, extraCheese, toppings };
-  const pizza = await validateItem(finalPizzaId, item);
+  const item = { pizza: finalPizzaId, quantity, size, crust, base, sauce, cheese, extraCheese, veggies, meat, toppings };
+  const { pizza, pizzaIngredients } = await validateItem(finalPizzaId, item);
 
   const unitPrice = computeUnitPrice(pizza.basePrice, size, crust, extraCheese, toppings);
 
@@ -172,8 +223,14 @@ export const addToCart = asyncHandler(async (req, res) => {
       quantity,
       size,
       crust,
+      base,
+      sauce,
+      cheese,
       extraCheese,
+      veggies,
+      meat,
       toppings,
+      pizzaIngredients,
       unitPrice,
       subtotal: Math.round(unitPrice * quantity * 100) / 100,
     });

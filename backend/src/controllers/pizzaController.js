@@ -1,5 +1,21 @@
 import Pizza from '../models/Pizza.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import { CUSTOMIZATION_OPTION_GROUPS } from '../config/customizationOptions.js';
+import {
+  extractIngredientNamesFromPizza,
+  syncInventoryIngredients,
+} from '../services/inventoryService.js';
+
+/**
+ * GET /api/pizzas/customization-options
+ * Returns Build Your Own Pizza options from the backend source of truth.
+ */
+export const getCustomizationOptions = asyncHandler(async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: CUSTOMIZATION_OPTION_GROUPS,
+  });
+});
 
 /**
  * GET /api/pizzas
@@ -36,6 +52,7 @@ export const getPizzaById = asyncHandler(async (req, res) => {
  */
 export const createPizza = asyncHandler(async (req, res) => {
   const pizza = await Pizza.create(req.body);
+  await syncInventoryIngredients(extractIngredientNamesFromPizza(pizza));
 
   res.status(201).json({
     success: true,

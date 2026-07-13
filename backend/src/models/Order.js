@@ -2,6 +2,13 @@ import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema(
   {
+    // Human-readable public order ID (e.g. INF-2026-A7K9P2)
+    publicId: {
+      type: String,
+      unique: true,
+      sparse: true,   // allows legacy orders without this field
+      trim: true,
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -29,11 +36,38 @@ const orderSchema = new mongoose.Schema(
           enum: ['thin', 'classic', 'thick'],
           default: 'classic',
         },
+        base: {
+          type: String,
+          trim: true,
+          default: '',
+        },
+        sauce: {
+          type: String,
+          trim: true,
+          default: '',
+        },
+        cheese: {
+          type: String,
+          trim: true,
+          default: '',
+        },
         extraCheese: {
           type: Boolean,
           default: false,
         },
+        veggies: {
+          type: [String],
+          default: [],
+        },
+        meat: {
+          type: [String],
+          default: [],
+        },
         toppings: {
+          type: [String],
+          default: [],
+        },
+        pizzaIngredients: {
           type: [String],
           default: [],
         },

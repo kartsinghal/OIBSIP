@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
+import Pizza from '../models/Pizza.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { validateStatusTransition } from '../utils/orderStateMachine.js';
-import { restoreInventory } from '../services/inventoryService.js';
+import { extractIngredientNamesFromPizza, restoreInventory } from '../services/inventoryService.js';
+import { generatePublicOrderId } from '../utils/publicOrderId.js';
 
 /**
  * GET /api/orders
@@ -106,12 +108,30 @@ export const getMyOrders = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/orders/:id
- * Returns a single order by ID (verifying ownership if not admin).
+ * Accepts EITHER a publicId (INF-2026-XXXXXX) OR a MongoDB _id.
+ * Verifies ownership if the requester is not admin.
  */
 export const getOrderById = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id)
-    .populate('user', 'fullName email')
-    .populate('items.pizza', 'name basePrice');
+  const { id } = req.params;
+
+  // Determine lookup strategy: publicId starts with 'INF-', otherwise treat as _id
+  const isPublicId = /^INF-\d{4}-[A-Z0-9]{6}$/.test(id);
+
+  let order;
+  if (isPublicId) {
+    order = await Order.findOne({ publicId: id })
+      .populate('user', 'fullName email')
+      .populate('items.pizza', 'name basePrice');
+  } else {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const err = new Error('Invalid order ID format');
+      err.statusCode = 400;
+      throw err;
+    }
+    order = await Order.findById(id)
+      .populate('user', 'fullName email')
+      .populate('items.pizza', 'name basePrice');
+  }
 
   if (!order) {
     const err = new Error('Order not found');
@@ -123,6 +143,33 @@ export const getOrderById = asyncHandler(async (req, res) => {
   if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
     const err = new Error('Not authorized to view this order');
     err.statusCode = 403;
+    throw err;
+  }
+
+  res.status(200).json({ success: true, data: order });
+});
+
+/**
+ * GET /api/orders/track/:publicId
+ * Public (no auth) endpoint — looks up an order by its publicId only.
+ * Does NOT expose user PII. Safe for unauthenticated tracking.
+ */
+export const trackOrderByPublicId = asyncHandler(async (req, res) => {
+  const { publicId } = req.params;
+
+  if (!/^INF-\d{4}-[A-Z0-9]{6}$/.test(publicId)) {
+    const err = new Error('Invalid Order ID format. Expected: INF-YYYY-XXXXXX');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const order = await Order.findOne({ publicId })
+    .populate('items.pizza', 'name basePrice')
+    .select('-user'); // strip user PII for public endpoint
+
+  if (!order) {
+    const err = new Error('Order not found. Please check the Order ID and try again.');
+    err.statusCode = 404;
     throw err;
   }
 
@@ -150,20 +197,47 @@ export const createOrder = asyncHandler(async (req, res) => {
       throw err;
     }
 
-    // ── 2. Create Immutable Order Snapshot ──────────────────────────────────────
+    const pizzaIds = [...new Set(cart.items.map((item) => item.pizza?.toString()).filter(Boolean))];
+    const pizzas = await Pizza.find({ _id: { $in: pizzaIds } })
+      .select('name description ingredients')
+      .session(session);
+    const pizzaIngredientsById = new Map(
+      pizzas.map((pizza) => [pizza._id.toString(), extractIngredientNamesFromPizza(pizza)])
+    );
+
+    // ── 2. Generate a unique publicId ───────────────────────────────────────────
+    let publicId;
+    let attempts = 0;
+    do {
+      publicId = generatePublicOrderId();
+      const exists = await Order.findOne({ publicId }).session(session).lean();
+      if (!exists) break;
+      attempts++;
+    } while (attempts < 5);
+
+    // ── 3. Create Immutable Order Snapshot ──────────────────────────────────────
     // Inventory check + deduction happen AFTER payment confirmation (in paymentController)
     const orderItems = cart.items.map(item => ({
       pizza: item.pizza,
       quantity: item.quantity,
       size: item.size,
       crust: item.crust,
+      base: item.base || '',
+      sauce: item.sauce || '',
+      cheese: item.cheese || '',
       extraCheese: item.extraCheese,
+      veggies: item.veggies || [],
+      meat: item.meat || [],
       toppings: item.toppings,
+      pizzaIngredients: item.pizzaIngredients?.length
+        ? item.pizzaIngredients
+        : pizzaIngredientsById.get(item.pizza?.toString()) || [],
       unitPrice: item.unitPrice,
       subtotal: item.subtotal,
     }));
 
     const [order] = await Order.create([{
+      publicId,
       user: req.user._id,
       items: orderItems,
       totalPrice: cart.cartTotal,
@@ -173,7 +247,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       paymentStatus: 'pending',
     }], { session });
 
-    // ── 3. Clear Cart ───────────────────────────────────────────────────────────
+    // ── 4. Clear Cart ───────────────────────────────────────────────────────────
     cart.items = [];
     cart.cartTotal = 0;
     await cart.save({ session });

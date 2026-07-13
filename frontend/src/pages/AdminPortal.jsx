@@ -99,7 +99,7 @@ export default function AdminPortal() {
   const { user } = useAuth();
 
   return (
-    <main style={{ padding: '48px 40px 80px' }}>
+    <main style={{ padding: 'clamp(24px, 6vw, 48px) clamp(16px, 4vw, 40px) 80px' }}>
       {/* Header */}
       <div style={{ marginBottom: 48 }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#FF4500' }}>

@@ -1,7 +1,13 @@
 import Order from '../models/Order.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { getRazorpayInstance, verifyRazorpaySignature } from '../utils/razorpay.js';
-import { checkInventory, deductInventory, buildRequirements } from '../services/inventoryService.js';
+import {
+  buildRequirements,
+  checkInventory,
+  deductInventory,
+  extractIngredientNamesFromOrderItems,
+  syncInventoryIngredients,
+} from '../services/inventoryService.js';
 
 /**
  * POST /api/payment/create-order
@@ -83,6 +89,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
   }
 
   // ── Inventory check + deduction (happens HERE, after payment confirmed) ─────
+  await syncInventoryIngredients(extractIngredientNamesFromOrderItems(order.items));
   const requirements = buildRequirements(order.items);
   await checkInventory(requirements);   // throws 409 if out of stock
   await deductInventory(order.items);   // deducts + sends low-stock email if needed
@@ -131,6 +138,7 @@ export const confirmCOD = asyncHandler(async (req, res) => {
   }
 
   // ── Inventory check + deduction (same as online payment path) ──────────────
+  await syncInventoryIngredients(extractIngredientNamesFromOrderItems(order.items));
   const requirements = buildRequirements(order.items);
   await checkInventory(requirements);   // throws 409 if out of stock
   await deductInventory(order.items);   // deducts + sends low-stock email if needed

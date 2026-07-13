@@ -3,17 +3,15 @@ import { useCart } from '../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import pizzaService from '../services/pizzaService';
 
-const STEPS = ['Base', 'Sauce', 'Cheese', 'Toppings'];
-
-const OPTIONS = {
-  Base: ['Sourdough', 'Thin Crust', 'Whole Wheat', 'Gluten-Free'],
-  Sauce: ['San Marzano', 'White Cream', 'Basil Pesto', 'Smoky BBQ'],
-  Cheese: ['Fior di Latte', 'Burrata', 'Fontina', 'Gorgonzola'],
-  Toppings: ['Wild Mushrooms', 'Prosciutto', 'Fresh Basil', 'Truffle Oil', 'Jalapeños', 'Black Olives'],
-};
 
 const BASE_PRICE = 449;
-const TOPPING_PRICE = 50;
+const TOPPING_PRICE = 30;
+
+const makeInitialSelections = (groups) =>
+  groups.reduce((acc, group) => {
+    acc[group.label] = group.key === 'toppings' ? [] : group.options?.[0] || '';
+    return acc;
+  }, {});
 
 // Sauce color palette
 const SAUCE_COLORS = {
@@ -57,13 +55,14 @@ function PizzaVisual({ selections }) {
   const R_CRUST = 130;
   const R_SAUCE = 112;
   const R_CHEESE = 106;
+  const activeToppings = selections.Toppings || [];
 
   const sauceColor = SAUCE_COLORS[selections.Sauce] || '#9E2618';
   const cheeseColor = CHEESE_COLORS[selections.Cheese] || '#EDE0BC';
 
   // Precompute topping positions — two rings per active topping
   const toppingElements = [];
-  selections.Toppings.forEach((topping, ti) => {
+  activeToppings.forEach((topping, ti) => {
     const cfg = TOPPING_CONFIG[topping] || { fill: '#555', r: 8 };
     const rings = [
       { radius: 82, count: 6, offset: ti * 0.55 },
@@ -269,31 +268,35 @@ function PizzaVisual({ selections }) {
 
 // --- Main Component ---
 export default function CustomizePizza() {
-  const [activeStep, setActiveStep] = useState('Base');
-  const [selections, setSelections] = useState({
-    Base: 'Sourdough',
-    Sauce: 'San Marzano',
-    Cheese: 'Fior di Latte',
-    Toppings: [],
-  });
+  const [optionGroups, setOptionGroups] = useState([]);
+  const [activeStep, setActiveStep] = useState('');
+  const [selections, setSelections] = useState({});
   const { dispatch, showToast } = useCart();
-  const [dynamicBaseId, setDynamicBaseId] = useState(null);
 
   useEffect(() => {
-    // Fetch real pizzas from Mongo to grab a valid base ObjectId dynamically
-    pizzaService.getAll().then(res => {
-      if (res.data?.data?.length > 0) {
-        setDynamicBaseId(res.data.data[0]._id);
-      }
-    }).catch(e => console.warn("Could not fetch base pizzas:", e));
+    let mounted = true;
+
+    pizzaService.getCustomizationOptions().then(res => {
+      if (!mounted) return;
+
+      const groups = Array.isArray(res.data?.data) ? res.data.data : [];
+      setOptionGroups(groups);
+      setActiveStep(groups[0]?.label || '');
+      setSelections(makeInitialSelections(groups));
+    }).catch(e => console.warn("Could not fetch customization options:", e));
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleAddToCart = () => {
+    if (optionGroups.length === 0) return;
+
     dispatch({
       type: 'ADD_ITEM',
       payload: {
-        _id: `custom-${selections.Base}-${selections.Sauce}-${selections.Cheese}-${selections.Toppings.join('-')}`,
-        basePizzaId: dynamicBaseId,
+        _id: `custom-${selections.Base}-${selections.Sauce}-${selections.Cheese}-${(selections.Toppings || []).join('-')}`,
         name: `Custom Pizza (${selections.Base})`,
         price: totalPrice,
         image: null,
@@ -304,12 +307,13 @@ export default function CustomizePizza() {
   };
 
   const handleSelect = (option) => {
-    if (activeStep === 'Toppings') {
+    const activeGroup = optionGroups.find(group => group.label === activeStep);
+    if (activeGroup?.key === 'toppings') {
       setSelections(prev => ({
         ...prev,
-        Toppings: prev.Toppings.includes(option)
-          ? prev.Toppings.filter(t => t !== option)
-          : [...prev.Toppings, option],
+        Toppings: (prev.Toppings || []).includes(option)
+          ? (prev.Toppings || []).filter(t => t !== option)
+          : [...(prev.Toppings || []), option],
       }));
     } else {
       setSelections(prev => ({ ...prev, [activeStep]: option }));
@@ -318,27 +322,54 @@ export default function CustomizePizza() {
 
   const isSelected = (option) =>
     activeStep === 'Toppings'
-      ? selections.Toppings.includes(option)
+      ? (selections.Toppings || []).includes(option)
       : selections[activeStep] === option;
 
-  const totalPrice = BASE_PRICE + selections.Toppings.length * TOPPING_PRICE;
+  const steps = optionGroups.map(group => group.label);
+  const activeOptions = optionGroups.find(group => group.label === activeStep)?.options || [];
+  const selectedToppings = selections.Toppings || [];
+  const totalPrice = BASE_PRICE + selectedToppings.length * TOPPING_PRICE;
 
   return (
     <section
       id="builder"
+      className="customizer-section"
       style={{
         backgroundColor: 'var(--bg-primary)',
-        padding: '108px 40px',
         borderTop: '1px solid var(--border-color)',
       }}
     >
+      <style>{`
+        .customizer-section {
+          padding: clamp(60px, 10vw, 108px) clamp(20px, 5vw, 40px);
+        }
+        .customizer-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 88px;
+          align-items: center;
+        }
+        .pizza-visual-wrapper {
+          display: flex; flex-direction: column; align-items: center; gap: 28px;
+        }
+        .pizza-svg-container {
+          transform: scale(1);
+          transform-origin: center top;
+        }
+        @media (max-width: 900px) {
+          .customizer-section { padding: 40px 20px; }
+          .customizer-grid {
+            grid-template-columns: 1fr;
+            gap: 40px;
+          }
+          .pizza-svg-container {
+            transform: scale(0.75);
+            margin-bottom: -70px; /* offset the scaled height */
+          }
+        }
+      `}</style>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 88,
-          alignItems: 'center',
-        }}>
+        <div className="customizer-grid">
 
           {/* LEFT: Controls */}
           <div>
@@ -378,18 +409,19 @@ export default function CustomizePizza() {
             {/* Step tabs */}
             <div style={{
               display: 'inline-flex',
+              flexWrap: 'wrap',
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border-color)',
-              borderRadius: 100,
+              borderRadius: 24,
               padding: 3,
               marginBottom: 24,
               gap: 2,
             }}>
-              {STEPS.map(step => {
+              {steps.map(step => {
                 const isActive = activeStep === step;
                 const isDone = step !== activeStep && (
                   step === 'Toppings'
-                    ? selections.Toppings.length > 0
+                    ? selectedToppings.length > 0
                     : !!selections[step]
                 );
                 return (
@@ -441,7 +473,7 @@ export default function CustomizePizza() {
                 transition={{ duration: 0.16 }}
                 style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 28 }}
               >
-                {OPTIONS[activeStep].map(option => {
+                {activeOptions.map(option => {
                   const selected = isSelected(option);
                   return (
                     <button
@@ -502,7 +534,7 @@ export default function CustomizePizza() {
               }}>
                 Your Order
               </p>
-              {STEPS.map((step, i) => (
+              {steps.map((step, i) => (
                 <div key={step}>
                   <div style={{
                     display: 'flex',
@@ -525,11 +557,11 @@ export default function CustomizePizza() {
                       whiteSpace: 'nowrap',
                     }}>
                       {step === 'Toppings'
-                        ? selections.Toppings.length > 0 ? selections.Toppings.join(', ') : '—'
+                        ? selectedToppings.length > 0 ? selectedToppings.join(', ') : '—'
                         : selections[step] || '—'}
                     </span>
                   </div>
-                  {i < STEPS.length - 1 && (
+                  {i < steps.length - 1 && (
                     <div style={{ height: 1, background: 'var(--border-color)' }} />
                   )}
                 </div>
@@ -568,13 +600,15 @@ export default function CustomizePizza() {
 
           {/* RIGHT: Live SVG pizza visual */}
           <motion.div
+            className="pizza-visual-wrapper"
             initial={{ opacity: 0, scale: 0.86 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28 }}
           >
-            <PizzaVisual selections={selections} />
+            <div className="pizza-svg-container">
+              <PizzaVisual selections={selections} />
+            </div>
 
             {/* Topping count pill */}
             <div style={{
@@ -587,11 +621,11 @@ export default function CustomizePizza() {
               borderRadius: 100,
             }}>
               <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 400 }}>
-                {selections.Toppings.length === 0
+                {selectedToppings.length === 0
                   ? 'No toppings selected'
-                  : `${selections.Toppings.length} topping${selections.Toppings.length !== 1 ? 's' : ''} added`}
+                  : `${selectedToppings.length} topping${selectedToppings.length !== 1 ? 's' : ''} added`}
               </span>
-              {selections.Toppings.length > 0 && (
+              {selectedToppings.length > 0 && (
                 <span style={{
                   fontSize: 12,
                   color: '#FF4500',
@@ -601,13 +635,13 @@ export default function CustomizePizza() {
                   borderRadius: 100,
                   border: '1px solid rgba(255,69,0,0.15)',
                 }}>
-                  +₹{selections.Toppings.length * TOPPING_PRICE}
+                  +₹{selectedToppings.length * TOPPING_PRICE}
                 </span>
               )}
             </div>
 
             {/* Ingredient key */}
-            {selections.Toppings.length > 0 && (
+            {selectedToppings.length > 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -620,7 +654,7 @@ export default function CustomizePizza() {
                   maxWidth: 300,
                 }}
               >
-                {selections.Toppings.map(t => {
+                {selectedToppings.map(t => {
                   const cfg = TOPPING_CONFIG[t] || {};
                   return (
                     <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

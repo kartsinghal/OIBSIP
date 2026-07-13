@@ -1,11 +1,15 @@
 import { Router } from 'express';
-import { getAllOrders, getMyOrders, getOrderById, createOrder, updateOrderStatus, updatePaymentStatus } from '../controllers/orderController.js';
+import { getAllOrders, getMyOrders, getOrderById, createOrder, updateOrderStatus, updatePaymentStatus, trackOrderByPublicId } from '../controllers/orderController.js';
 import { validateOrderCreate } from '../validators/orderValidator.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = Router();
 
-// All order routes require authentication
+// ── Public route (no auth) — track by public order ID ──────────────────────────
+// Must be registered BEFORE router.use(authenticate) so it doesn't require a token
+router.get('/track/:publicId', trackOrderByPublicId);
+
+// All routes below require authentication
 router.use(authenticate);
 
 // Admin only routes

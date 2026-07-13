@@ -56,7 +56,7 @@ function OtpInput({ value, onChange }) {
   };
 
   return (
-    <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+    <div style={{ display: 'flex', gap: 'clamp(4px, 2vw, 10px)', justifyContent: 'center', width: '100%' }}>
       {Array.from({ length: 6 }, (_, i) => {
         const filled = digits[i]?.trim();
         return (
@@ -71,7 +71,9 @@ function OtpInput({ value, onChange }) {
             onKeyDown={e => handleKeyDown(i, e)}
             onPaste={handlePaste}
             style={{
-              width: 44,
+              flex: 1,
+              maxWidth: 44,
+              minWidth: 0,
               height: 54,
               textAlign: 'center',
               fontSize: 22,

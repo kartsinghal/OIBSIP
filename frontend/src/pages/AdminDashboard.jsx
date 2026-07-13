@@ -37,6 +37,19 @@ const STATUS_COLORS = {
 
 const POLL_INTERVAL_MS = 8000; // 8 seconds — admin dashboard refreshes more aggressively
 
+// ── Table header cell style ────────────────────────────────────────────────────
+const TH_STYLE = {
+  padding: '12px 20px',
+  textAlign: 'left',
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--text-tertiary)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.07em',
+  borderBottom: '1px solid var(--border-color)',
+  whiteSpace: 'nowrap',
+};
+
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const c = STATUS_COLORS[status] || STATUS_COLORS.pending;
@@ -125,8 +138,8 @@ function OrderRow({ order, onUpdate, onPaymentUpdate, busy }) {
     >
       {/* Order ID + time */}
       <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
-        <div style={{ fontFamily: 'Courier New, monospace', fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
-          ...{order._id.slice(-8)}
+        <div style={{ fontFamily: 'Courier New, monospace', fontSize: 13, color: '#FF4500', fontWeight: 700 }}>
+          {order.publicId || `...${order._id.slice(-8)}`}
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>
           {new Date(order.createdAt).toLocaleString()}
@@ -156,48 +169,56 @@ function OrderRow({ order, onUpdate, onPaymentUpdate, busy }) {
       {/* Amount + payment */}
       <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-          ₹{order.totalPrice.toFixed(2)}
+          ₹{(order.totalPrice ?? 0).toFixed(2)}
         </div>
         <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-          <span style={{
-            fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 100,
-            backgroundColor: 
-              order.paymentStatus === 'paid' ? 'rgba(22,163,74,0.1)' : 
-              order.paymentStatus === 'failed' ? 'rgba(239,68,68,0.1)' : 
-              order.paymentStatus === 'refunded' ? 'rgba(107,114,128,0.1)' : 
-              'rgba(234,179,8,0.1)',
-            color: 
-              order.paymentStatus === 'paid' ? '#16a34a' : 
-              order.paymentStatus === 'failed' ? '#dc2626' : 
-              order.paymentStatus === 'refunded' ? '#4b5563' : 
-              '#ca8a04',
-            border: `1px solid ${
-              order.paymentStatus === 'paid' ? 'rgba(22,163,74,0.25)' : 
-              order.paymentStatus === 'failed' ? 'rgba(239,68,68,0.25)' : 
-              order.paymentStatus === 'refunded' ? 'rgba(107,114,128,0.25)' : 
-              'rgba(234,179,8,0.25)'
-            }`,
-          }}>
-            {order.paymentMethod === 'cod' ? 'COD' : 'ONLINE'} · {order.paymentStatus.toUpperCase()}
-          </span>
-
-          {order.paymentMethod === 'cod' && order.paymentStatus !== 'paid' && (
-            <button
-              onClick={() => onPaymentUpdate(order._id, 'paid')}
-              disabled={busy}
-              style={{
-                fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6,
-                backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)',
-                border: '1px solid var(--border-color)', cursor: busy ? 'not-allowed' : 'pointer',
-                transition: 'border-color 0.2s, color 0.2s',
-                opacity: busy ? 0.5 : 1,
-              }}
-              onMouseEnter={e => { if(!busy) { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.color = '#16a34a'; } }}
-              onMouseLeave={e => { if(!busy) { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
-            >
-              Mark as Paid
-            </button>
-          )}
+          {(() => {
+            const ps = order.paymentStatus || 'pending';
+            const pm = order.paymentMethod || 'online';
+            const bgColor =
+              ps === 'paid'     ? 'rgba(22,163,74,0.1)'    :
+              ps === 'failed'   ? 'rgba(239,68,68,0.1)'    :
+              ps === 'refunded' ? 'rgba(107,114,128,0.1)'  :
+              'rgba(234,179,8,0.1)';
+            const textColor =
+              ps === 'paid'     ? '#16a34a' :
+              ps === 'failed'   ? '#dc2626' :
+              ps === 'refunded' ? '#4b5563' :
+              '#ca8a04';
+            const borderColor =
+              ps === 'paid'     ? 'rgba(22,163,74,0.25)'   :
+              ps === 'failed'   ? 'rgba(239,68,68,0.25)'   :
+              ps === 'refunded' ? 'rgba(107,114,128,0.25)' :
+              'rgba(234,179,8,0.25)';
+            return (
+              <>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 100,
+                  backgroundColor: bgColor, color: textColor,
+                  border: `1px solid ${borderColor}`,
+                }}>
+                  {pm === 'cod' ? 'COD' : 'ONLINE'} · {ps.toUpperCase()}
+                </span>
+                {pm === 'cod' && ps !== 'paid' && (
+                  <button
+                    onClick={() => onPaymentUpdate(order._id, 'paid')}
+                    disabled={busy}
+                    style={{
+                      fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6,
+                      backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+                      border: '1px solid var(--border-color)', cursor: busy ? 'not-allowed' : 'pointer',
+                      transition: 'border-color 0.2s, color 0.2s',
+                      opacity: busy ? 0.5 : 1,
+                    }}
+                    onMouseEnter={e => { if(!busy) { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.color = '#16a34a'; } }}
+                    onMouseLeave={e => { if(!busy) { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                  >
+                    Mark as Paid
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
       </td>
 
@@ -217,9 +238,9 @@ function OrderRow({ order, onUpdate, onPaymentUpdate, busy }) {
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, accent }) {
   return (
-    <div style={{
+    <div className="stat-card" style={{
       background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-      borderRadius: 16, padding: '20px 24px',
+      borderRadius: 16,
     }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
         {label}
@@ -249,7 +270,8 @@ const AdminDashboard = () => {
       if (!silent) setLoading(true);
       setError('');
       const res = await apiClient.get('/orders');
-      setOrders(res.data.data);
+      // Guard: always set an array to prevent .filter/.map crashes
+      setOrders(Array.isArray(res.data?.data) ? res.data.data : []);
       setLastPoll(new Date());
     } catch (err) {
       if (!silent) setError(err.response?.data?.message || 'Failed to fetch orders');
@@ -274,7 +296,7 @@ const AdminDashboard = () => {
       const res = await apiClient.patch(`/orders/${orderId}/status`, { status: newStatus });
       setOrders(prev => prev.map(o => o._id === orderId ? res.data.data : o));
       const label = STATUS_LABELS[newStatus] || newStatus;
-      setFeedback(`Order ...${orderId.slice(-6)} → ${label}`);
+      setFeedback(`Order ${order.publicId || `...${orderId.slice(-6)}`} → ${label}`);
       setTimeout(() => setFeedback(''), 3500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update status');
@@ -290,7 +312,8 @@ const AdminDashboard = () => {
     try {
       const res = await apiClient.patch(`/orders/${orderId}/payment-status`, { paymentStatus: newPaymentStatus });
       setOrders(prev => prev.map(o => o._id === orderId ? res.data.data : o));
-      setFeedback(`Order ...${orderId.slice(-6)} marked as Paid`);
+      const updatedOrder = orders.find(o => o._id === orderId);
+      setFeedback(`Order ${updatedOrder?.publicId || `...${orderId.slice(-6)}`} marked as Paid`);
       setTimeout(() => setFeedback(''), 3500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update payment status');
@@ -301,6 +324,15 @@ const AdminDashboard = () => {
   };
 
   if (authLoading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>;
+
+  // Guard: only admins should see this page (AdminLayout handles redirect, but belt + suspenders)
+  if (!user || user.role !== 'admin') {
+    return (
+      <div style={{ padding: 80, textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 16 }}>Access restricted to administrators.</p>
+      </div>
+    );
+  }
 
   // ── Filtering ───────────────────────────────────────────────────────────────
   const TERMINAL = ['delivered', 'cancelled'];
@@ -324,50 +356,49 @@ const AdminDashboard = () => {
   const pending   = orders.filter(o => o.orderStatus === 'pending').length;
   const delivered = orders.filter(o => o.orderStatus === 'delivered').length;
 
-  const TH_STYLE = {
-    padding: '12px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700,
-    color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.07em',
-    background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)',
-  };
-
   return (
-    <main style={{ backgroundColor: 'var(--bg-primary)', minHeight: '90vh', padding: '40px 0 80px' }}>
-      <div style={{ maxWidth: 1300, margin: '0 auto', padding: '0 24px' }}>
+    <main className="admin-dash-main" style={{ backgroundColor: 'var(--bg-primary)', minHeight: '90vh' }}>
+      <style>{`
+        .admin-dash-main { padding: 40px 0 80px; }
+        .admin-dash-container {
+          padding: clamp(20px, 4vw, 40px);
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+        .stat-card { padding: 20px 24px; }
+        @media (max-width: 768px) {
+          .admin-dash-main { padding: 24px 0 40px; }
+          .admin-dash-container {
+            padding: 20px 16px;
+          }
+          .stat-card { padding: 16px 16px; }
+        }
+      `}</style>
+      <div className="admin-dash-container">
 
         {/* ── Header ── */}
-        <div style={{ marginBottom: 36, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#FF4500' }}>
-              Admin
-            </span>
-            <h1 style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 900, color: 'var(--text-primary)', margin: '6px 0 0', letterSpacing: '-0.02em' }}>
-              Orders Dashboard
+            <h1 style={{ fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+              Order Management
             </h1>
+            <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>
+              Real-time monitoring and fulfillment.
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            {lastPoll && (
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                ↻ Auto-refresh · {lastPoll.toLocaleTimeString()}
-              </span>
-            )}
-            <button
-              onClick={() => fetchOrders()}
-              style={{
-                fontSize: 13, fontWeight: 600, padding: '8px 18px', borderRadius: 10,
-                border: '1px solid var(--border-color)', background: 'var(--bg-secondary)',
-                color: 'var(--text-primary)', cursor: 'pointer',
-              }}
-            >
-              ↻ Refresh
-            </button>
-            <Link to="/admin/inventory" style={{
-              fontSize: 13, fontWeight: 600, padding: '8px 18px', borderRadius: 10,
-              background: '#FF4500', color: '#fff', textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}>
-              🧅 Inventory
-            </Link>
-          </div>
+          <button
+            onClick={fetchOrders}
+            disabled={loading}
+            style={{
+              padding: '10px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+              backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)', cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <span style={{ display: 'inline-block', transform: loading ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>↻</span>
+            Refresh
+          </button>
         </div>
 
         {/* ── Stat cards ── */}
@@ -395,7 +426,7 @@ const AdminDashboard = () => {
         <div style={{
           background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
           borderRadius: 16, padding: '16px 20px', marginBottom: 20,
-          display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center',
+          display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center',
         }}>
           <input
             type="text"
@@ -403,7 +434,7 @@ const AdminDashboard = () => {
             value={searchId}
             onChange={e => setSearchId(e.target.value)}
             style={{
-              flex: 1, minWidth: 200, backgroundColor: 'var(--bg-tertiary)',
+              flex: '1 1 200px', backgroundColor: 'var(--bg-tertiary)',
               border: '1px solid var(--border-color)', color: 'var(--text-primary)',
               fontSize: 13, padding: '10px 16px', borderRadius: 10, outline: 'none',
               fontFamily: 'Courier New, monospace',
@@ -411,22 +442,25 @@ const AdminDashboard = () => {
             onFocus={e => e.target.style.borderColor = '#FF4500'}
             onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
           />
-          {['active', 'all', ...Object.keys(STATUS_LABELS)].map(key => (
-            <button
-              key={key}
-              onClick={() => setStatusFilter(key)}
-              style={{
-                fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 20,
-                cursor: 'pointer', textTransform: 'capitalize',
-                border: statusFilter === key ? '1px solid #FF4500' : '1px solid var(--border-color)',
-                background: statusFilter === key ? 'rgba(255,69,0,0.08)' : 'var(--bg-tertiary)',
-                color: statusFilter === key ? '#FF4500' : 'var(--text-secondary)',
-                transition: 'all 0.15s',
-              }}
-            >
-              {key === 'active' ? '🔥 Active' : key === 'all' ? 'All' : STATUS_LABELS[key] || key}
-            </button>
-          ))}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: '2 1 400px' }}>
+            {['active', 'all', ...Object.keys(STATUS_LABELS)].map(key => (
+              <button
+                key={key}
+                onClick={() => setStatusFilter(key)}
+                style={{
+                  fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 20,
+                  cursor: 'pointer', textTransform: 'capitalize',
+                  border: statusFilter === key ? '1px solid #FF4500' : '1px solid var(--border-color)',
+                  background: statusFilter === key ? 'rgba(255,69,0,0.08)' : 'var(--bg-tertiary)',
+                  color: statusFilter === key ? '#FF4500' : 'var(--text-secondary)',
+                  transition: 'all 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {key === 'active' ? '🔥 Active' : key === 'all' ? 'All' : STATUS_LABELS[key] || key}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ── Orders table ── */}
@@ -438,8 +472,8 @@ const AdminDashboard = () => {
           </div>
         ) : (
           <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 16, overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: '900px', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     {['Order ID', 'Customer', 'Items', 'Amount', 'Status', 'Update'].map(h => (

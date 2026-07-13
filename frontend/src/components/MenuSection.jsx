@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const CATEGORIES = ['All', 'Classic', 'Specialty', 'Vegan'];
 
 const PIZZAS = [
+  // ── Classic (7) ──────────────────────────────────────────────────────────────
   {
     _id: 'static-1',
     name: 'Margherita',
@@ -25,13 +26,60 @@ const PIZZAS = [
     image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=700&q=85&auto=format&fit=crop',
   },
   {
+    _id: 'static-c3',
+    name: 'Napolitana',
+    category: 'Classic',
+    tag: null,
+    description: 'Crushed tomato, anchovies, capers, black olives, oregano',
+    price: 349,
+    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-c4',
+    name: 'Diavola',
+    category: 'Classic',
+    tag: 'Spicy',
+    description: 'Spicy salami, tomato, mozzarella, chilli flakes, fresh basil',
+    price: 429,
+    image: '/images/pizzas/diavola.png',
+  },
+  {
+    _id: 'static-c5',
+    name: 'Capricciosa',
+    category: 'Classic',
+    tag: null,
+    description: 'Ham, artichokes, mushrooms, black olives, mozzarella',
+    price: 449,
+    image: 'https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-c6',
+    name: 'Marinara',
+    category: 'Classic',
+    tag: null,
+    description: 'San Marzano tomato, garlic, oregano, EVOO — no cheese',
+    price: 249,
+    image: '/images/pizzas/marinara.png',
+  },
+  {
+    _id: 'static-c7',
+    name: 'Prosciutto e Funghi',
+    category: 'Classic',
+    tag: 'New',
+    description: 'Parma ham, wild mushrooms, mozzarella, fresh thyme',
+    price: 479,
+    image: 'https://images.unsplash.com/photo-1548369937-47519962c11a?w=700&q=85&auto=format&fit=crop',
+  },
+
+  // ── Specialty (7) ────────────────────────────────────────────────────────────
+  {
     _id: 'static-3',
     name: 'Truffle Funghi',
     category: 'Specialty',
     tag: "Chef's Pick",
     description: 'White truffle oil, wild mushrooms, fontina, fresh thyme',
     price: 549,
-    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=700&q=85&auto=format&fit=crop',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Pizza-3007395.jpg',
   },
   {
     _id: 'static-4',
@@ -40,7 +88,117 @@ const PIZZAS = [
     tag: 'New',
     description: 'Mozzarella, gorgonzola, parmigiano, ricotta, acacia honey',
     price: 499,
-    image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=700&q=85&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-s3',
+    name: 'Burrata & Bresaola',
+    category: 'Specialty',
+    tag: "Chef's Pick",
+    description: 'Creamy burrata, cured bresaola, rocket, lemon zest, EVOO',
+    price: 649,
+    image: '/images/pizzas/burrata_bresaola.png',
+  },
+  {
+    _id: 'static-s4',
+    name: 'Smoky BBQ Chicken',
+    category: 'Specialty',
+    tag: 'Bestseller',
+    description: 'Smoky BBQ base, grilled chicken, red onion, jalapeño, cheddar',
+    price: 529,
+    image: 'https://images.unsplash.com/photo-1590947132387-155cc02f3212?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-s5',
+    name: 'Prawn Aglio',
+    category: 'Specialty',
+    tag: null,
+    description: 'Tiger prawns, garlic oil, cherry tomato, parsley, mozzarella',
+    price: 699,
+    image: '/images/pizzas/prawn_aglio.png',
+  },
+  {
+    _id: 'static-s6',
+    name: 'Fig & Gorgonzola',
+    category: 'Specialty',
+    tag: 'Limited',
+    description: 'Fresh fig, gorgonzola, walnuts, honey drizzle, rocket',
+    price: 579,
+    image: '/images/pizzas/fig_gorgonzola.png',
+  },
+  {
+    _id: 'static-s7',
+    name: 'Speck & Pear',
+    category: 'Specialty',
+    tag: 'New',
+    description: 'Smoked speck, sliced pear, brie, balsamic glaze, toasted walnuts',
+    price: 599,
+    image: 'https://images.unsplash.com/photo-1576458088443-04a19bb13da6?w=700&q=85&auto=format&fit=crop',
+  },
+
+  // ── Vegan (7) ────────────────────────────────────────────────────────────────
+  {
+    _id: 'static-v1',
+    name: 'Garden Primavera',
+    category: 'Vegan',
+    tag: 'Bestseller',
+    description: 'Tomato base, courgette, peppers, red onion, cherry tomato, basil',
+    price: 349,
+    image: '/images/pizzas/garden_primavera.png',
+  },
+  {
+    _id: 'static-v2',
+    name: 'Roasted Aubergine',
+    category: 'Vegan',
+    tag: null,
+    description: 'Smoky roasted aubergine, tahini, harissa, pine nuts, mint',
+    price: 379,
+    image: 'https://images.unsplash.com/photo-1598023696416-0193a0bcd302?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-v3',
+    name: 'Pesto Verde',
+    category: 'Vegan',
+    tag: "Chef's Pick",
+    description: 'Vegan basil pesto, cherry tomato, artichoke, capers, EVOO',
+    price: 399,
+    image: 'https://images.unsplash.com/photo-1593504049359-74330189a345?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-v4',
+    name: 'Mushroom Truffle',
+    category: 'Vegan',
+    tag: null,
+    description: 'Cashew cream base, mixed mushrooms, truffle oil, thyme, garlic',
+    price: 449,
+    image: 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-v5',
+    name: 'Spicy Arrabiata',
+    category: 'Vegan',
+    tag: 'Spicy',
+    description: 'Arrabiata sauce, olives, capers, chilli, roasted peppers',
+    price: 329,
+    image: 'https://images.unsplash.com/photo-1506354666786-959d6d497f1a?w=700&q=85&auto=format&fit=crop',
+  },
+  {
+    _id: 'static-v6',
+    name: 'Butternut Squash',
+    category: 'Vegan',
+    tag: null,
+    description: 'Roasted butternut squash, caramelised red onion, vegan feta, sage',
+    price: 389,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/a/a3/Eq_it-na_pizza-margherita_sep2005_sml.jpg',
+  },
+  {
+    _id: 'static-v7',
+    name: 'Fig & Rocket',
+    category: 'Vegan',
+    tag: 'New',
+    description: 'Fresh fig, vegan mozzarella, balsamic glaze, toasted pine nuts, rocket',
+    price: 419,
+    image: 'https://images.unsplash.com/photo-1552539618-7eec9b4d1796?w=700&q=85&auto=format&fit=crop',
   },
 ];
 
@@ -56,6 +214,7 @@ function PizzaCard({ pizza, index }) {
 
   return (
     <motion.div
+      className="pizza-card-wrapper"
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
@@ -65,15 +224,16 @@ function PizzaCard({ pizza, index }) {
       style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
     >
       {/* Image container */}
-      <div style={{
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: 14,
-        marginBottom: 20,
-        backgroundColor: 'var(--bg-secondary)',
-        height: 280,
-        border: '1px solid var(--border-color)',
-      }}>
+      <div 
+        className="pizza-card-img-container"
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 14,
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+        }}
+      >
         <motion.img
           src={pizza.image}
           alt={pizza.name}
@@ -90,13 +250,11 @@ function PizzaCard({ pizza, index }) {
           transition: 'background 0.4s ease',
         }} />
 
-        {/* Add to cart */}
-        <AnimatePresence>
-          {hovered && (
+          {/* Add to cart (Always visible on mobile via CSS, or hover on desktop) */}
+          <div className={`pizza-add-btn ${hovered ? 'visible' : ''}`}>
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
+              initial={false}
+              animate={{ opacity: hovered ? 1 : 0, y: hovered ? 0 : 12 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               style={{
                 position: 'absolute',
@@ -130,8 +288,7 @@ function PizzaCard({ pizza, index }) {
                 Add to Cart
               </button>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </div>
       </div>
 
       {/* Card info */}
@@ -195,11 +352,26 @@ export default function MenuSection() {
   const filtered = active === 'All' ? PIZZAS : PIZZAS.filter(p => p.category === active);
 
   return (
-    <section style={{
-      backgroundColor: 'var(--bg-primary)',
-      padding: '120px 40px',
-      borderTop: '1px solid var(--border-color)',
-    }}>
+    <section 
+      id="menu-section"
+      className="menu-section-container"
+      style={{
+        backgroundColor: 'var(--bg-primary)',
+      }}
+    >
+      <style>{`
+        .menu-section-container { padding: 120px 40px; }
+        .pizza-card-img-container { height: 280px; margin-bottom: 20px; }
+        .pizza-add-btn { opacity: 0; pointer-events: none; }
+        .pizza-add-btn.visible { opacity: 1; pointer-events: auto; }
+        
+        @media (max-width: 768px) {
+          .menu-section-container { padding: 64px 20px; }
+          .pizza-card-img-container { height: 200px; margin-bottom: 16px; }
+          /* On mobile, always show the add to cart button to avoid double-tap hover issues */
+          .pizza-add-btn, .pizza-add-btn > div { opacity: 1 !important; transform: none !important; pointer-events: auto; }
+        }
+      `}</style>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
         {/* Header row */}
@@ -208,6 +380,8 @@ export default function MenuSection() {
           alignItems: 'flex-end',
           justifyContent: 'space-between',
           marginBottom: 48,
+          flexWrap: 'wrap',
+          gap: 24,
         }}>
           <div>
             <motion.p
@@ -281,6 +455,8 @@ export default function MenuSection() {
           borderBottom: '1px solid var(--border-color)',
           paddingBottom: 16,
           width: '100%',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}>
           {CATEGORIES.map(cat => (
             <button
@@ -298,6 +474,8 @@ export default function MenuSection() {
                 letterSpacing: '0.02em',
                 background: active === cat ? 'var(--bg-tertiary)' : 'transparent',
                 color: active === cat ? 'var(--text-primary)' : 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
               onMouseEnter={e => { if (active !== cat) e.currentTarget.style.color = 'var(--text-primary)'; }}
               onMouseLeave={e => { if (active !== cat) e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -313,43 +491,9 @@ export default function MenuSection() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
           gap: '48px 36px',
         }}>
-          {filtered.map((pizza, index) => {
-            if (active === 'All' && index === 2) {
-              return (
-                <React.Fragment key="editorial-block">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    style={{
-                      gridColumn: '1 / -1',
-                      backgroundColor: 'var(--bg-secondary)',
-                      borderRadius: 14,
-                      padding: '48px 40px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      border: '1px solid var(--border-color)',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <div style={{ position: 'absolute', top: -30, right: 10, opacity: 0.04, fontSize: 300, fontWeight: 900, color: 'var(--text-primary)', pointerEvents: 'none', lineHeight: 0.8, fontFamily: 'Georgia, serif' }}>"</div>
-                    <h3 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 300, color: 'var(--text-primary)', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginBottom: 20, lineHeight: 1.4, maxWidth: '80%' }}>
-                      "We don't make fast food. We make good food as fast as we can — without compromising the dough."
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 30, height: 1, backgroundColor: '#FF4500' }}></div>
-                      <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: 0 }}>Chef Marco</p>
-                    </div>
-                  </motion.div>
-                  <PizzaCard key={pizza.id} pizza={pizza} index={index} />
-                </React.Fragment>
-              );
-            }
-            return <PizzaCard key={pizza.id} pizza={pizza} index={index} />;
-          })}
+          {filtered.map((pizza, index) => (
+            <PizzaCard key={pizza._id} pizza={pizza} index={index} />
+          ))}
         </div>
 
       </div>

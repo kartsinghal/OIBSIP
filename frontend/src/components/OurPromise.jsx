@@ -21,24 +21,30 @@ const PROMISES = [
 export default function OurPromise() {
   return (
     <section
+      className="our-promise-section"
       style={{
         backgroundColor: 'var(--bg-secondary)',
-        padding: '108px 40px',
         borderTop: '1px solid var(--border-color)',
       }}
     >
+      <style>{`
+        .our-promise-section { padding: 108px 40px; }
+        .op-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 96px; align-items: start; }
+        .op-sticky { position: sticky; top: 120px; }
+        .op-list-item { display: flex; gap: 32px; padding: 36px 0; border-top: 1px solid var(--border-color); }
+        
+        @media (max-width: 768px) {
+          .our-promise-section { padding: 64px 20px; }
+          .op-grid { grid-template-columns: 1fr; gap: 48px; }
+          .op-sticky { position: relative; top: 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
+          .op-list-item { gap: 20px; padding: 24px 0; }
+        }
+      `}</style>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 96,
-            alignItems: 'start',
-          }}
-        >
+        <div className="op-grid">
 
           {/* Left: sticky statement */}
-          <div style={{ position: 'sticky', top: 120 }}>
+          <div className="op-sticky">
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -100,12 +106,8 @@ export default function OurPromise() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: '-40px' }}
                 transition={{ duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  display: 'flex',
-                  gap: 32,
-                  padding: '36px 0',
-                  borderTop: '1px solid var(--border-color)',
-                }}
+                style={{}}
+                className="op-list-item"
               >
                 {/* Large muted number */}
                 <span

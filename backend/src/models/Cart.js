@@ -22,11 +22,38 @@ const cartItemSchema = new mongoose.Schema(
       enum: ['thin', 'classic', 'thick'],
       default: 'classic',
     },
+    base: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    sauce: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    cheese: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     extraCheese: {
       type: Boolean,
       default: false,
     },
+    veggies: {
+      type: [String],
+      default: [],
+    },
+    meat: {
+      type: [String],
+      default: [],
+    },
     toppings: {
+      type: [String],
+      default: [],
+    },
+    pizzaIngredients: {
       type: [String],
       default: [],
     },

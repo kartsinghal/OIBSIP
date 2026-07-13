@@ -17,10 +17,38 @@ const fadeUp = (delay = 0) => ({
 export default function AboutPage() {
   return (
     <main style={{ backgroundColor: 'var(--bg-primary)', minHeight: '80vh', paddingTop: 120 }}>
+      <style>{`
+        .about-hero-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 80px;
+          align-items: start;
+        }
+        .about-milestones-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 40px;
+        }
+        @media (max-width: 900px) {
+          .about-hero-grid {
+            grid-template-columns: 1fr;
+            gap: 48px;
+          }
+          .about-milestones-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
+          }
+        }
+        @media (max-width: 600px) {
+          .about-milestones-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
 
       {/* Editorial Header */}
-      <section style={{ padding: '40px 40px 80px', maxWidth: 1400, margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
+      <section style={{ padding: 'clamp(20px, 4vw, 40px) clamp(20px, 4vw, 40px) 80px', maxWidth: 1400, margin: '0 auto' }}>
+        <div className="about-hero-grid">
 
           {/* Left: Title block */}
           <div style={{ maxWidth: 600 }}>
@@ -113,10 +141,8 @@ export default function AboutPage() {
             marginTop: 80,
             paddingTop: 48,
             borderTop: '1px solid var(--border-color)',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 40,
           }}
+          className="about-milestones-grid"
         >
           {MILESTONES.map(({ year, label }, i) => (
             <motion.div

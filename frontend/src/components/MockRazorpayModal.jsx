@@ -119,10 +119,10 @@ export default function MockRazorpayModal({ amount, orderName, prefill, onSucces
         </div>
 
         {/* ── Tabs ── */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #eee', margin: '12px 0 0' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid #eee', margin: '12px 0 0', overflowX: 'auto' }}>
           {['card', 'upi', 'netbanking', 'cod'].map(t => (
-            <button key={t} style={tabStyle(tab === t)} onClick={() => setTab(t)}>
-              {t === 'card' ? '💳 Card' : t === 'upi' ? '⚡ UPI' : t === 'netbanking' ? '🏦 Net Banking' : '🛵 COD'}
+            <button key={t} style={{ ...tabStyle(tab === t), whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setTab(t)}>
+              {t === 'card' ? '💳 Card' : t === 'upi' ? '⚡ UPI' : t === 'netbanking' ? '🏦 Bank' : '🛵 COD'}
             </button>
           ))}
         </div>
@@ -311,16 +311,33 @@ function Spinner() {
 const overlay = {
   position: 'fixed', inset: 0, zIndex: 9999,
   background: 'rgba(0,0,0,0.55)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
   fontFamily: 'Inter, sans-serif',
+  padding: '0',
 };
 
 const modal = {
-  background: '#fff', borderRadius: 16,
-  width: '100%', maxWidth: 420,
-  boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
-  overflow: 'hidden',
+  background: '#fff',
+  borderRadius: '16px 16px 0 0',
+  width: '100%',
+  maxWidth: 460,
+  maxHeight: '92vh',
+  overflowY: 'auto',
+  boxShadow: '0 -8px 40px rgba(0,0,0,0.25)',
 };
+
+// On tablets+, center it like a proper dialog
+if (typeof window !== 'undefined' && window.innerWidth >= 520) {
+  Object.assign(modal, {
+    borderRadius: 16,
+    maxHeight: '90vh',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
+  });
+  Object.assign(overlay, {
+    alignItems: 'center',
+    padding: '16px',
+  });
+}
 
 const label = {
   display: 'block', fontSize: 11, fontWeight: 600,

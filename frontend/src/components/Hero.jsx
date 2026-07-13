@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 30 },
@@ -32,6 +32,7 @@ function OrderButton() {
         textTransform: 'uppercase',
         display: 'inline-block',
         transform: hovered ? 'scale(0.98)' : 'scale(1)',
+        whiteSpace: 'nowrap',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -57,6 +58,7 @@ function MenuLink() {
         transition: 'color 0.3s ease',
         letterSpacing: '0.02em',
         textTransform: 'uppercase',
+        whiteSpace: 'nowrap',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -71,6 +73,15 @@ function MenuLink() {
 }
 
 export default function Hero() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <section style={{
       minHeight: '100vh',
@@ -81,6 +92,113 @@ export default function Hero() {
       overflow: 'hidden',
       position: 'relative',
     }}>
+      <style>{`
+        .hero-container {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: clamp(40px, 8vw, 72px) clamp(20px, 5vw, 40px);
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 48px;
+          align-items: center;
+          position: relative;
+          z-index: 1;
+        }
+        .hero-pizza-wrapper {
+          position: absolute;
+          right: -10%;
+          top: 50%;
+          margin-top: -250px;
+          width: 600px;
+          pointer-events: none;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .hero-content {
+          position: relative;
+          z-index: 10;
+          padding-top: 8vh;
+        }
+        .hero-ctas {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          margin-bottom: 56px;
+          flex-wrap: wrap;
+        }
+        .hero-stats-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 48px;
+        }
+        
+        @media (max-width: 768px) {
+          .hero-container {
+            grid-template-columns: 1fr;
+            text-align: center;
+            padding: clamp(20px, 5vw, 40px) 20px !important;
+            gap: 24px !important;
+          }
+          .hero-content {
+            padding-top: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          .hero-content h1 {
+            font-size: clamp(38px, 11vw, 56px) !important;
+            margin-left: 0 !important;
+            line-height: 1 !important;
+            margin-bottom: 24px !important;
+          }
+          .hero-content h1 span {
+            transform: none !important;
+            display: block !important;
+          }
+          .hero-content h1 br {
+            display: none !important;
+          }
+          .hero-content p.subtext {
+            padding-left: 0 !important;
+            border-left: none !important;
+            text-align: center;
+            font-size: clamp(14px, 4vw, 16px) !important;
+            line-height: 1.6 !important;
+            margin-bottom: 32px !important;
+            color: var(--text-primary) !important;
+            opacity: 0.9;
+          }
+          .hero-pizza-wrapper {
+            position: relative;
+            right: auto;
+            top: auto;
+            margin-top: 0;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            grid-row: 1;
+          }
+          .hero-ctas {
+            flex-direction: column;
+            width: 100%;
+            gap: 16px !important;
+            margin-bottom: 40px !important;
+          }
+          .hero-ctas > a {
+            width: 100%;
+            display: flex !important;
+            justify-content: center !important;
+          }
+          .hero-stats-row {
+            justify-content: space-around !important;
+            gap: 16px !important;
+            width: 100%;
+          }
+        }
+      `}</style>
+
       {/* Editorial ambient glow, slightly off-center */}
       <div style={{
         position: 'absolute',
@@ -93,20 +211,9 @@ export default function Hero() {
         pointerEvents: 'none',
       }} />
 
-      <div style={{
-        maxWidth: 1400,
-        margin: '0 auto',
-        padding: '72px 40px',
-        width: '100%',
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 48,
-        alignItems: 'center',
-        position: 'relative',
-        zIndex: 1,
-      }}>
+      <div className="hero-container">
         {/* LEFT: Content */}
-        <div style={{ position: 'relative', zIndex: 10, paddingTop: '8vh' }}>
+        <div className="hero-content">
           {/* Overline */}
           <motion.p
             {...fadeUp(0.05)}
@@ -124,9 +231,10 @@ export default function Hero() {
           >
             <span style={{ width: 30, height: 1, backgroundColor: '#FF4500' }}></span>
             Fired to Perfection
+            {isMobile && <span style={{ width: 30, height: 1, backgroundColor: '#FF4500' }}></span>}
           </motion.p>
 
-          {/* Headline - tighter leading, bigger size, offset second line */}
+          {/* Headline */}
           <motion.h1
             {...fadeUp(0.15)}
             style={{
@@ -134,7 +242,7 @@ export default function Hero() {
               lineHeight: 0.92,
               letterSpacing: '-0.05em',
               color: 'var(--text-primary)',
-              fontSize: 'clamp(64px, 8vw, 110px)',
+              fontSize: 'clamp(48px, 8vw, 110px)',
               marginBottom: 32,
               marginLeft: '-4px'
             }}
@@ -147,14 +255,15 @@ export default function Hero() {
           {/* Subtext */}
           <motion.p
             {...fadeUp(0.25)}
+            className="subtext"
             style={{
-              fontSize: 16,
+              fontSize: 'clamp(14px, 2vw, 16px)',
               lineHeight: 1.8,
               color: 'var(--text-secondary)',
               maxWidth: 420,
               marginBottom: 48,
               fontWeight: 400,
-              paddingLeft: '10%',
+              paddingLeft: '5%',
               borderLeft: '1px solid var(--border-color)'
             }}
           >
@@ -165,26 +274,23 @@ export default function Hero() {
           {/* CTAs */}
           <motion.div
             {...fadeUp(0.35)}
-            style={{ display: 'flex', alignItems: 'center', gap: 32, marginBottom: 72, paddingLeft: '10%' }}
+            className="hero-ctas"
           >
             <OrderButton />
             <MenuLink />
           </motion.div>
 
-          {/* Stats strip - completely restructured for editorial feel */}
+          {/* Stats strip */}
           <motion.div
             {...fadeUp(0.45)}
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 48,
-            }}
+            className="hero-stats-row"
           >
-            {STATS.map(({ value, label }, i) => (
+            {STATS.map(({ value, label }) => (
               <div key={label} style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 4,
+                alignItems: isMobile ? 'center' : 'flex-start'
               }}>
                 <span style={{ fontSize: 28, fontWeight: 300, color: 'var(--text-primary)', letterSpacing: '-0.02em', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>
                   {value}
@@ -197,45 +303,42 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* RIGHT: Pizza image with asymmetrical offset */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85, rotate: -8, x: 100 }}
-          animate={{
-            opacity: 1,
-            scale: 1.25,
-            rotate: [2, -2, 2],
-            x: 80,
-            y: [30, -10, 30],
-          }}
-          transition={{
-            opacity: { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
-            scale: { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
-            x: { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
-            rotate: { duration: 15, repeat: Infinity, ease: 'easeInOut' },
-            y: { duration: 8, repeat: Infinity, ease: 'easeInOut' },
-          }}
-          style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            position: 'absolute',
-            right: '-10%',
-            top: '50%',
-            marginTop: '-250px',
-            width: '600px',
-            pointerEvents: 'none'
-          }}
-        >
-          <img
-            src="/images/pizza-hero.png"
-            alt="Neapolitan pizza"
-            style={{
-              width: '100%',
-              objectFit: 'contain',
-              filter: 'drop-shadow(-20px 40px 60px rgba(0,0,0,0.8)) drop-shadow(0 20px 40px rgba(255,69,0,0.15))',
+        {/* RIGHT: Pizza image */}
+        <div className="hero-pizza-wrapper">
+          <motion.div
+            initial={{ opacity: 0, scale: isMobile ? 0.9 : 0.85, rotate: -8, x: isMobile ? 0 : 100 }}
+            animate={{
+              opacity: 1,
+              scale: isMobile ? 1 : 1.25,
+              rotate: [2, -2, 2],
+              x: isMobile ? 0 : 80,
+              y: [isMobile ? 10 : 30, isMobile ? -5 : -10, isMobile ? 10 : 30],
             }}
-          />
-        </motion.div>
+            transition={{
+              opacity: { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
+              scale: { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
+              x: { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
+              rotate: { duration: 15, repeat: Infinity, ease: 'easeInOut' },
+              y: { duration: 8, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            style={{ 
+              width: '100%',
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center',
+            }}
+          >
+            <img
+              src="/images/pizza-hero.png"
+              alt="Neapolitan pizza"
+              style={{
+                width: '100%',
+                objectFit: 'contain',
+                filter: 'drop-shadow(-20px 40px 60px rgba(0,0,0,0.8)) drop-shadow(0 20px 40px rgba(255,69,0,0.15))',
+              }}
+            />
+          </motion.div>
+        </div>
       </div>
     </section>
   );

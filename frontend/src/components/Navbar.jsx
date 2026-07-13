@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModal } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
@@ -122,6 +122,7 @@ export default function Navbar() {
   const { open: openAuth } = useAuthModal();
   const { user, isAuthenticated, logout } = useAuth();
   const { totalItems } = useCart();
+  const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [ctaHovered, setCtaHovered] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -135,10 +136,37 @@ export default function Navbar() {
   // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
-  }, []);
+  }, [location.pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  const handleMobileLogout = () => {
+    setMobileOpen(false);
+    logout();
+  };
 
   return (
     <>
+      <style>{`
+        @media (max-width: 768px) {
+          .navbar-desktop-nav { display: none !important; }
+          .navbar-desktop-controls { display: none !important; }
+          .navbar-hamburger { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .navbar-mobile-menu { display: none !important; }
+          .navbar-hamburger { display: none !important; }
+        }
+      `}</style>
+
       <header
         style={{
           position: 'fixed',
@@ -153,7 +181,7 @@ export default function Navbar() {
           borderBottom: `1px solid ${scrolled || mobileOpen ? 'var(--navbar-border)' : 'transparent'}`,
         }}
       >
-        {/* ── 3-column flex: Logo | Nav | Controls ── no absolute positioning ── */}
+        {/* ── Desktop: 3-column flex ── */}
         <div style={{
           maxWidth: 1400,
           margin: '0 auto',
@@ -163,15 +191,15 @@ export default function Navbar() {
           alignItems: 'center',
           gap: 16,
         }}>
-          {/* Col 1 — Logo (fixed width, no shrink) */}
+          {/* Logo */}
           <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
             <span style={{ fontWeight: 900, fontSize: 19, letterSpacing: '-0.035em', color: 'var(--text-primary)' }}>
               INFERNO<span style={{ color: '#FF4500' }}>.</span>
             </span>
           </Link>
 
-          {/* Col 2 — Center nav (grows to fill space, links centered) */}
-          <nav style={{
+          {/* Center nav — desktop only */}
+          <nav className="navbar-desktop-nav" style={{
             flex: 1,
             display: 'flex',
             alignItems: 'center',
@@ -184,8 +212,8 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Col 3 — Right controls (fixed, no shrink, wraps gracefully) */}
-          <div style={{
+          {/* Right controls — desktop only */}
+          <div className="navbar-desktop-controls" style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -195,7 +223,6 @@ export default function Navbar() {
 
             {isAuthenticated ? (
               <>
-                {/* Cart */}
                 <Link
                   to="/cart"
                   style={{
@@ -219,7 +246,6 @@ export default function Navbar() {
                   Cart ({totalItems})
                 </Link>
 
-                {/* Username — icon only on narrow viewports */}
                 <span style={{
                   fontSize: 13, fontWeight: 500,
                   color: 'var(--text-primary)',
@@ -235,7 +261,6 @@ export default function Navbar() {
                   {user?.fullName?.split(' ')[0] || 'Profile'}
                 </span>
 
-                {/* Admin link — only for admin role */}
                 {user?.role === 'admin' && (
                   <Link
                     to="/admin"
@@ -255,7 +280,6 @@ export default function Navbar() {
                   </Link>
                 )}
 
-                {/* Logout */}
                 <button
                   onClick={logout}
                   style={{
@@ -312,7 +336,6 @@ export default function Navbar() {
               </>
             )}
 
-            {/* Order Now CTA */}
             <Link
               to="/menu"
               style={{
@@ -331,6 +354,189 @@ export default function Navbar() {
               Order Now
             </Link>
           </div>
+
+          {/* Mobile right: theme + cart badge + hamburger */}
+          <div className="navbar-hamburger" style={{
+            display: 'none',
+            marginLeft: 'auto',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <ThemeToggle />
+
+            {isAuthenticated && (
+              <Link
+                to="/cart"
+                style={{
+                  position: 'relative',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 36, height: 36,
+                  color: 'var(--text-secondary)',
+                  textDecoration: 'none',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                {totalItems > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 2, right: 2,
+                    width: 14, height: 14,
+                    background: '#FF4500', color: '#fff',
+                    borderRadius: '50%', fontSize: 9, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {totalItems > 9 ? '9+' : totalItems}
+                  </span>
+                )}
+              </Link>
+            )}
+
+            {/* Hamburger button */}
+            <button
+              onClick={() => setMobileOpen(o => !o)}
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-color)',
+                borderRadius: 8,
+                width: 36, height: 36,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: 5, cursor: 'pointer', padding: 0, flexShrink: 0,
+              }}
+            >
+              <span style={{
+                display: 'block', width: 16, height: 1.5,
+                background: 'var(--text-primary)', borderRadius: 2,
+                transition: 'transform 0.25s ease, opacity 0.25s ease',
+                transform: mobileOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none',
+              }} />
+              <span style={{
+                display: 'block', width: 16, height: 1.5,
+                background: 'var(--text-primary)', borderRadius: 2,
+                transition: 'opacity 0.25s ease',
+                opacity: mobileOpen ? 0 : 1,
+              }} />
+              <span style={{
+                display: 'block', width: 16, height: 1.5,
+                background: 'var(--text-primary)', borderRadius: 2,
+                transition: 'transform 0.25s ease, opacity 0.25s ease',
+                transform: mobileOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none',
+              }} />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Mobile drawer menu ── */}
+        <div
+          className="navbar-mobile-menu"
+          style={{
+            display: 'block',
+            background: 'var(--bg-navbar)',
+            borderTop: '1px solid var(--navbar-border)',
+            padding: mobileOpen ? '12px 24px 20px' : '0 24px',
+            overflow: 'hidden',
+            maxHeight: mobileOpen ? 600 : 0,
+            transition: 'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease',
+          }}
+        >
+          {/* Nav links */}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 20 }}>
+            {NAV_LINKS.map(link => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                onClick={() => setMobileOpen(false)}
+                style={({ isActive }) => ({
+                  textDecoration: 'none',
+                  fontSize: 15,
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? '#FF4500' : 'var(--text-primary)',
+                  padding: '9px 0',
+                  borderBottom: '1px solid var(--border-color)',
+                  letterSpacing: '-0.01em',
+                })}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Auth actions */}
+          {isAuthenticated ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {user?.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    textDecoration: 'none', fontSize: 14, fontWeight: 700,
+                    color: '#fff', background: '#FF4500',
+                    padding: '12px 20px', borderRadius: 10,
+                    textAlign: 'center',
+                  }}
+                >
+                  ⬡ Admin Portal
+                </Link>
+              )}
+              <Link
+                to="/menu"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  textDecoration: 'none', fontSize: 14, fontWeight: 700,
+                  color: '#fff', background: '#FF4500',
+                  padding: '12px 20px', borderRadius: 10,
+                  textAlign: 'center',
+                }}
+              >
+                Order Now
+              </Link>
+              <button
+                onClick={handleMobileLogout}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-color)',
+                  fontSize: 14, fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  padding: '11px 20px', borderRadius: 10,
+                  cursor: 'pointer', textAlign: 'center',
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link
+                to="/menu"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  textDecoration: 'none', fontSize: 14, fontWeight: 700,
+                  color: '#fff', background: '#FF4500',
+                  padding: '12px 20px', borderRadius: 10,
+                  textAlign: 'center',
+                }}
+              >
+                Order Now
+              </Link>
+              <button
+                onClick={() => { setMobileOpen(false); openAuth(); }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-color)',
+                  fontSize: 14, fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  padding: '11px 20px', borderRadius: 10,
+                  cursor: 'pointer',
+                }}
+              >
+                Login / Sign Up
+              </button>
+            </div>
+          )}
         </div>
       </header>
     </>

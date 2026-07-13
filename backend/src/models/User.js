@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
+      unique: true,
       sparse: true,       // allows multiple null values (unique only when set)
       trim: true,
       lowercase: true,
@@ -17,6 +18,7 @@ const userSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
+      unique: true,
       sparse: true,
       trim: true,
       default: null,
@@ -49,9 +51,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Compound index: unique phone per provider when set
-userSchema.index({ phone: 1 }, { unique: true, sparse: true });
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
+// Compound indexes removed in favor of field-level unique constraints
 
 const User = mongoose.model('User', userSchema);
 export default User;

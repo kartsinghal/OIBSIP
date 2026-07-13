@@ -4,6 +4,7 @@ import apiClient from './apiClient';
 const pizzaService = {
   getAll: () => apiClient.get('/pizzas'),
   getById: (id) => apiClient.get(`/pizzas/${id}`),
+  getCustomizationOptions: () => apiClient.get('/pizzas/customization-options'),
 };
 
 export default pizzaService;

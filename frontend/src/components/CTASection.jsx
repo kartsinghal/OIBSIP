@@ -10,24 +10,41 @@ const RATINGS = [
 export default function CTASection() {
   return (
     <section
+      className="cta-section"
       style={{
         backgroundColor: 'var(--bg-secondary)',
-        padding: '128px 40px',
         borderTop: '1px solid var(--border-color)',
       }}
     >
+      <style>{`
+        .cta-section { padding: 128px 40px; }
+        .cta-grid {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 80px;
+          align-items: end;
+        }
+        .cta-text-wrapper { text-align: left; }
+        .cta-actions { min-width: 260px; }
+        .cta-ratings { gap: 24px; justify-content: flex-start; }
+        
+        @media (max-width: 768px) {
+          .cta-section { padding: 64px 20px; }
+          .cta-grid {
+            grid-template-columns: 1fr;
+            gap: 40px;
+            text-align: center;
+          }
+          .cta-text-wrapper { text-align: center; display: flex; flex-direction: column; align-items: center; }
+          .cta-actions { min-width: 100%; }
+          .cta-ratings { justify-content: space-between; gap: 12px; }
+        }
+      `}</style>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
-            gap: 80,
-            alignItems: 'end',
-          }}
-        >
+        <div className="cta-grid">
 
           {/* Left: Headline */}
-          <div>
+          <div className="cta-text-wrapper">
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -80,6 +97,7 @@ export default function CTASection() {
 
           {/* Right: CTAs + ratings */}
           <motion.div
+            className="cta-actions"
             initial={{ opacity: 0, x: 24 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -88,7 +106,6 @@ export default function CTASection() {
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
-              minWidth: 260,
             }}
           >
             <Link
@@ -141,10 +158,10 @@ export default function CTASection() {
 
             {/* Ratings strip */}
             <div
+              className="cta-ratings"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 24,
                 paddingTop: 20,
                 marginTop: 8,
                 borderTop: '1px solid var(--border-color)',

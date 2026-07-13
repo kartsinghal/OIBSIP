@@ -1,17 +1,13 @@
 import Inventory from '../models/Inventory.js';
-import { sendLowStockAlert } from '../services/mailService.js';
+import Pizza from '../models/Pizza.js';
+import { getCustomizationIngredientNames } from '../config/customizationOptions.js';
+import { sendLowStockAlert } from './mailService.js';
 
-/**
- * Base ingredients consumed by EVERY pizza, regardless of toppings.
- * Keys must match `ingredientName` (case-insensitive) in the Inventory collection.
- * Quantities are per-pizza-unit (multiplied by item.quantity at deduction time).
- *
- * Size multipliers:
- *   small  → 1×
- *   medium → 1.5×
- *   large  → 2×
- */
-const BASE_INGREDIENTS = ['dough', 'sauce', 'cheese'];
+const DEFAULT_SYNC_ITEM = {
+  quantity: 0,
+  threshold: 0,
+  unit: 'units',
+};
 
 const SIZE_MULTIPLIER = {
   small: 1,
@@ -19,71 +15,236 @@ const SIZE_MULTIPLIER = {
   large: 2,
 };
 
-/**
- * Build a flat requirement map { ingredientNameLower: totalQty } for an
- * array of order/cart items.
- *
- * Each item contributes:
- *   - base ingredients (dough, sauce, cheese) × size multiplier × quantity
- *   - extra cheese (if extraCheese=true) × size multiplier × quantity
- *   - each topping × quantity
- */
-export const buildRequirements = (items) => {
-  const req = {};
+export const normalizeIngredientName = (value) =>
+  String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-  const add = (name, qty) => {
-    const key = name.toLowerCase();
-    req[key] = (req[key] || 0) + qty;
-  };
+const cleanIngredientName = (value) =>
+  String(value || '').trim().replace(/\s+/g, ' ');
+
+const asArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (value === undefined || value === null || value === '') return [];
+  return [value];
+};
+
+const uniqueIngredientNames = (names) => {
+  const ingredients = new Map();
+
+  for (const name of names || []) {
+    const displayName = cleanIngredientName(name);
+    const normalizedName = normalizeIngredientName(displayName);
+    if (!normalizedName || ingredients.has(normalizedName)) continue;
+    ingredients.set(normalizedName, displayName);
+  }
+
+  return ingredients;
+};
+
+const withSession = (query, session) => (session ? query.session(session) : query);
+
+const getAllInventoryRecords = async (session) =>
+  withSession(Inventory.find({}), session);
+
+export const ingredientNamesFromDescription = (description = '') => {
+  const cleanedDescription = String(description)
+    .replace(/\bno\s+cheese\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanedDescription) return [];
+
+  return cleanedDescription
+    .split(',')
+    .map((part) =>
+      part
+        .replace(/\s+[-–—]\s+.*$/u, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter(Boolean);
+};
+
+export const extractIngredientNamesFromPizza = (pizza) => {
+  if (normalizeIngredientName(pizza?.name) === 'custom pizza') return [];
+
+  const explicitIngredients = [...uniqueIngredientNames(pizza?.ingredients || []).values()];
+  if (explicitIngredients.length > 0) return explicitIngredients;
+  return ingredientNamesFromDescription(pizza?.description || '');
+};
+
+export const extractIngredientNamesFromOrderItems = (items = []) => {
+  const names = [];
 
   for (const item of items) {
-    const mult = SIZE_MULTIPLIER[item.size] || 1;
-    const qty  = item.quantity || 1;
+    names.push(...asArray(item.pizzaIngredients));
+    names.push(item.base, item.sauce, item.cheese);
+    names.push(...asArray(item.veggies));
+    names.push(...asArray(item.meat));
+    names.push(...asArray(item.toppings));
 
-    // Base ingredients
-    for (const ing of BASE_INGREDIENTS) {
-      add(ing, mult * qty);
-    }
-
-    // Extra cheese
     if (item.extraCheese) {
-      add('cheese', mult * qty);
-    }
-
-    // Toppings
-    for (const topping of item.toppings || []) {
-      add(topping, qty);
+      names.push(item.cheese || 'cheese');
     }
   }
 
-  return req;
+  return [...uniqueIngredientNames(names).values()];
 };
 
-/**
- * Check if inventory is sufficient for the given requirements.
- * Throws HTTP 409 if any ingredient is out of stock.
- * @param {Object} requirements - { ingredientNameLower: qty }
- * @param {mongoose.ClientSession} [session]
- */
-export const checkInventory = async (requirements, session) => {
+export const findInventoryByIngredientName = async (ingredientName, session) => {
+  const normalizedName = normalizeIngredientName(ingredientName);
+  if (!normalizedName) return null;
+
+  const direct = await withSession(Inventory.findOne({ normalizedName }), session);
+  if (direct) return direct;
+
+  const records = await getAllInventoryRecords(session);
+  return records.find((record) => normalizeIngredientName(record.ingredientName) === normalizedName) || null;
+};
+
+export const syncInventoryIngredients = async (ingredientNames = [], { session } = {}) => {
+  const ingredients = uniqueIngredientNames(ingredientNames);
+  if (ingredients.size === 0) return { created: [], existing: [] };
+
+  const records = await getAllInventoryRecords(session);
+  const existingByName = new Map();
+
+  for (const record of records) {
+    const normalizedName = record.normalizedName || normalizeIngredientName(record.ingredientName);
+    if (normalizedName && !existingByName.has(normalizedName)) {
+      existingByName.set(normalizedName, record);
+    }
+  }
+
+  const created = [];
+  const existing = [];
+
+  for (const [normalizedName, displayName] of ingredients.entries()) {
+    const current = existingByName.get(normalizedName);
+
+    if (current) {
+      if (current.normalizedName !== normalizedName) {
+        current.normalizedName = normalizedName;
+        await current.save(session ? { session } : undefined);
+      }
+      existing.push(current);
+      continue;
+    }
+
+    try {
+      const [item] = await Inventory.create([{
+        ingredientName: displayName,
+        normalizedName,
+        ...DEFAULT_SYNC_ITEM,
+      }], session ? { session } : undefined);
+
+      existingByName.set(normalizedName, item);
+      created.push(item);
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+
+      const racedItem = await findInventoryByIngredientName(displayName, session);
+      if (!racedItem) throw err;
+      existingByName.set(normalizedName, racedItem);
+      existing.push(racedItem);
+    }
+  }
+
+  return { created, existing };
+};
+
+export const syncInventoryFromCatalog = async ({ session } = {}) => {
+  const query = Pizza.find({});
+  const pizzas = await withSession(query, session);
+  const names = [...getCustomizationIngredientNames()];
+
+  for (const pizza of pizzas) {
+    names.push(...extractIngredientNamesFromPizza(pizza));
+  }
+
+  return syncInventoryIngredients(names, { session });
+};
+
+const findInventoryRecordsForRequirements = async (requirements, session) => {
+  const names = Object.keys(requirements);
+  if (names.length === 0) return new Map();
+
+  const query = Inventory.find({ normalizedName: { $in: names } });
+  const records = await withSession(query, session);
+  const recordsByName = new Map(
+    records.map((record) => [record.normalizedName || normalizeIngredientName(record.ingredientName), record])
+  );
+
+  if (recordsByName.size < names.length) {
+    const allRecords = await getAllInventoryRecords(session);
+    for (const record of allRecords) {
+      const normalizedName = record.normalizedName || normalizeIngredientName(record.ingredientName);
+      if (normalizedName && names.includes(normalizedName) && !recordsByName.has(normalizedName)) {
+        recordsByName.set(normalizedName, record);
+      }
+    }
+  }
+
+  return recordsByName;
+};
+
+export const buildRequirements = (items) => {
+  const requirements = {};
+
+  const add = (name, qty) => {
+    const normalizedName = normalizeIngredientName(name);
+    if (!normalizedName || qty <= 0) return;
+    requirements[normalizedName] = (requirements[normalizedName] || 0) + qty;
+  };
+
+  for (const item of items || []) {
+    const sizeMultiplier = SIZE_MULTIPLIER[item.size] || 1;
+    const itemQty = item.quantity || 1;
+    const sizedQty = sizeMultiplier * itemQty;
+
+    for (const ingredient of asArray(item.pizzaIngredients)) {
+      add(ingredient, sizedQty);
+    }
+
+    add(item.base, sizedQty);
+    add(item.sauce, sizedQty);
+    add(item.cheese, sizedQty);
+
+    if (item.extraCheese) {
+      add(item.cheese || 'cheese', sizedQty);
+    }
+
+    for (const ingredient of asArray(item.veggies)) {
+      add(ingredient, itemQty);
+    }
+    for (const ingredient of asArray(item.meat)) {
+      add(ingredient, itemQty);
+    }
+    for (const ingredient of asArray(item.toppings)) {
+      add(ingredient, itemQty);
+    }
+  }
+
+  return requirements;
+};
+
+export const checkInventory = async (requirements, session, { syncMissing = false } = {}) => {
   const names = Object.keys(requirements);
   if (names.length === 0) return;
 
-  const query = Inventory.find({ ingredientName: { $in: names } });
-  if (session) query.session(session);
-  const records = await query;
+  if (syncMissing) {
+    await syncInventoryIngredients(names, { session });
+  }
 
-  const invMap = Object.fromEntries(
-    records.map(r => [r.ingredientName.toLowerCase(), r])
-  );
-
+  const recordsByName = await findInventoryRecordsForRequirements(requirements, session);
   const outOfStock = [];
+
   for (const name of names) {
-    const record = invMap[name];
-    if (record && record.quantity < requirements[name]) {
+    const record = recordsByName.get(name);
+    if (!record) continue;
+
+    if (record.quantity < requirements[name]) {
       outOfStock.push(record.ingredientName);
     }
-    // If ingredient doesn't exist in inventory yet, we skip (non-blocking)
   }
 
   if (outOfStock.length > 0) {
@@ -93,28 +254,21 @@ export const checkInventory = async (requirements, session) => {
   }
 };
 
-/**
- * Deduct inventory for confirmed order items.
- * Sends low-stock email after deduction if any ingredient falls below threshold.
- * @param {Array} items - order items (with size, quantity, extraCheese, toppings)
- * @param {mongoose.ClientSession} [session]
- */
 export const deductInventory = async (items, session) => {
+  await syncInventoryIngredients(extractIngredientNamesFromOrderItems(items), { session });
+
   const requirements = buildRequirements(items);
   const names = Object.keys(requirements);
   if (names.length === 0) return;
 
-  const query = Inventory.find({ ingredientName: { $in: names } });
-  if (session) query.session(session);
-  const records = await query;
-
+  const recordsByName = await findInventoryRecordsForRequirements(requirements, session);
   const lowItems = [];
 
-  for (const record of records) {
-    const needed = requirements[record.ingredientName.toLowerCase()] || 0;
-    if (needed <= 0) continue;
+  for (const name of names) {
+    const record = recordsByName.get(name);
+    if (!record) continue;
 
-    record.quantity = Math.max(0, record.quantity - needed);
+    record.quantity = Math.max(0, record.quantity - requirements[name]);
 
     if (session) {
       await record.save({ session });
@@ -122,37 +276,30 @@ export const deductInventory = async (items, session) => {
       await record.save();
     }
 
-    // Collect items at or below threshold for email
     if (record.quantity <= record.threshold) {
       lowItems.push(record);
     }
   }
 
-  // Fire-and-forget email — never blocks the order flow
   if (lowItems.length > 0) {
     sendLowStockAlert(lowItems).catch(() => {});
   }
 };
 
-/**
- * Restore inventory when an order is cancelled.
- * @param {Array} items - order items
- * @param {mongoose.ClientSession} [session]
- */
 export const restoreInventory = async (items, session) => {
+  await syncInventoryIngredients(extractIngredientNamesFromOrderItems(items), { session });
+
   const requirements = buildRequirements(items);
   const names = Object.keys(requirements);
   if (names.length === 0) return;
 
-  const query = Inventory.find({ ingredientName: { $in: names } });
-  if (session) query.session(session);
-  const records = await query;
+  const recordsByName = await findInventoryRecordsForRequirements(requirements, session);
 
-  for (const record of records) {
-    const restored = requirements[record.ingredientName.toLowerCase()] || 0;
-    if (restored <= 0) continue;
+  for (const name of names) {
+    const record = recordsByName.get(name);
+    if (!record) continue;
 
-    record.quantity += restored;
+    record.quantity += requirements[name];
 
     if (session) {
       await record.save({ session });
@@ -160,4 +307,19 @@ export const restoreInventory = async (items, session) => {
       await record.save();
     }
   }
+};
+
+export const isIngredientReferenced = async (ingredientName) => {
+  const normalizedName = normalizeIngredientName(ingredientName);
+  if (!normalizedName) return false;
+
+  const customizationMatch = getCustomizationIngredientNames()
+    .some((name) => normalizeIngredientName(name) === normalizedName);
+  if (customizationMatch) return true;
+
+  const pizzas = await Pizza.find({}).select('ingredients description').lean();
+  return pizzas.some((pizza) =>
+    extractIngredientNamesFromPizza(pizza)
+      .some((name) => normalizeIngredientName(name) === normalizedName)
+  );
 };

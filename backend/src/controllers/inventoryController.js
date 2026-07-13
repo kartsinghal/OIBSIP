@@ -1,12 +1,18 @@
 import Inventory from '../models/Inventory.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { sendLowStockAlert } from '../services/mailService.js';
+import {
+  findInventoryByIngredientName,
+  isIngredientReferenced,
+  syncInventoryFromCatalog,
+} from '../services/inventoryService.js';
 
 /**
  * GET /api/inventory
  * Returns all inventory items.
  */
 export const getAllInventoryItems = asyncHandler(async (req, res) => {
+  await syncInventoryFromCatalog();
   const items = await Inventory.find({}).sort({ ingredientName: 1 });
 
   res.status(200).json({
@@ -40,6 +46,13 @@ export const getInventoryItemById = asyncHandler(async (req, res) => {
  * Admin: Creates a new inventory item.
  */
 export const createInventoryItem = asyncHandler(async (req, res) => {
+  const existing = await findInventoryByIngredientName(req.body.ingredientName);
+  if (existing) {
+    const err = new Error(`"${existing.ingredientName}" already exists in inventory`);
+    err.statusCode = 409;
+    throw err;
+  }
+
   const item = await Inventory.create(req.body);
 
   res.status(201).json({
@@ -108,6 +121,12 @@ export const deleteInventoryItem = asyncHandler(async (req, res) => {
   if (!item) {
     const err = new Error('Inventory item not found');
     err.statusCode = 404;
+    throw err;
+  }
+
+  if (await isIngredientReferenced(item.ingredientName)) {
+    const err = new Error(`"${item.ingredientName}" is still used by pizzas or customization options`);
+    err.statusCode = 409;
     throw err;
   }
 

@@ -1,6 +1,6 @@
 import Hero from '../components/Hero';
-import MenuSection from '../components/MenuSection';
 import InsideKitchen from '../components/InsideKitchen';
+import EditorialQuote from '../components/EditorialQuote';
 import CustomizePizza from '../components/CustomizePizza';
 import CTASection from '../components/CTASection';
 
@@ -8,8 +8,8 @@ function HomePage() {
   return (
     <main>
       <Hero />
-      <MenuSection />
       <InsideKitchen />
+      <EditorialQuote />
       <CustomizePizza />
       <CTASection />
     </main>
