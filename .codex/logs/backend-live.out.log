@@ -1,0 +1,4 @@
+🚀 Server running on http://localhost:5000 in [development] mode
+✅  MongoDB connected: 127.0.0.1
+[0mGET /api/health [32m200[0m 8.734 ms - 176[0m
+[0mGET /api/pizzas/customization-options [32m200[0m 0.986 ms - 449[0m
